@@ -33,16 +33,26 @@
 body{font-family:'DM Sans',sans-serif;color:var(--text);overflow:hidden;height:100vh}
 
 /* ===== EMBED ===== */
-.embed-container{position:relative;width:100%;aspect-ratio:1/1;cursor:pointer;overflow:hidden;border-radius:var(--radius);background:var(--dark)}
+.embed-container{position:relative;width:100%;aspect-ratio:1/1;cursor:pointer;overflow:hidden;border-radius:var(--radius);background:var(--dark);border:2px solid var(--cyan);animation:embedGlow 2.5s ease-in-out infinite}
+@keyframes embedGlow{0%,100%{box-shadow:0 0 16px rgba(44,181,200,0.35),0 0 36px rgba(44,181,200,0.1)}50%{box-shadow:0 0 22px rgba(44,181,200,0.55),0 0 50px rgba(44,181,200,0.2)}}
 .embed-map{width:100%;height:100%;z-index:1}
-.embed-overlay{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,rgba(26,35,50,0.85),rgba(44,181,200,0.3));transition:opacity 0.3s}
-.embed-overlay h2{color:#fff;font-size:1.3rem;font-weight:700;margin-bottom:6px}
-.embed-overlay p{color:rgba(255,255,255,0.8);font-size:0.85rem}
-.embed-overlay .embed-btn{margin-top:16px;background:var(--cyan);color:#fff;border:none;padding:10px 28px;border-radius:6px;font-size:0.9rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.2s}
+.embed-overlay{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,rgba(26,35,50,0.4),rgba(44,181,200,0.1));transition:opacity 0.3s}
+.embed-overlay-content{background:rgba(26,35,50,0.75);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border-radius:12px;padding:20px 32px;display:flex;flex-direction:column;align-items:center}
+.embed-overlay h2{color:#fff;font-size:1.3rem;font-weight:700;margin-bottom:6px;text-shadow:0 1px 4px rgba(0,0,0,0.5)}
+.embed-overlay p{color:rgba(255,255,255,0.9);font-size:0.85rem;text-shadow:0 1px 3px rgba(0,0,0,0.4)}
+.embed-carousel{min-height:48px;text-align:center;transition:opacity 0.4s}
+.embed-counter{display:flex;align-items:baseline;justify-content:center;gap:5px;margin:10px 0 2px;color:rgba(255,255,255,0.9);font-size:0.82rem;font-weight:600}
+.embed-counter-num{font-size:1.6rem;font-weight:700;color:var(--cyan)}
+.embed-overlay .embed-btn{margin-top:14px;background:var(--cyan);color:#fff;border:none;padding:10px 28px;border-radius:6px;font-size:0.9rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.2s}
 .embed-overlay .embed-btn:hover{background:var(--primary-light);transform:translateY(-1px)}
 .embed-container:hover .embed-overlay{opacity:0.95}
+.embed-dot-pulse{width:8px;height:8px;border-radius:50%;background:#2CB5C8;position:relative;box-shadow:0 0 3px rgba(44,181,200,0.5)}
+.embed-dot-pulse::after{content:'';position:absolute;inset:-3px;border-radius:50%;border:1.5px solid #2CB5C8;opacity:0;animation:embedRing 2.2s ease-out infinite}
+.embed-dot-pulse:nth-child(2n)::after{animation-delay:0.7s}
+.embed-dot-pulse:nth-child(3n)::after{animation-delay:1.4s}
+@keyframes embedRing{0%{transform:scale(0.6);opacity:0.7}100%{transform:scale(2);opacity:0}}
 .embed-container.size-small{width:300px;height:245px;border-radius:0}
-.embed-container.size-small .embed-overlay{padding:20px;text-align:center}
+.embed-container.size-small .embed-overlay-content{padding:14px 20px}
 .embed-container.size-small .embed-overlay h2{font-size:1rem}
 .embed-container.size-small .embed-overlay p{font-size:0.75rem}
 .embed-container.size-small .embed-overlay .embed-btn{padding:8px 20px;font-size:0.8rem;margin-top:10px}
@@ -310,9 +320,14 @@ body{font-family:'DM Sans',sans-serif;color:var(--text);overflow:hidden;height:1
 <div class="embed-container" id="embedContainer" onclick="openModal()">
   <div id="embedMap" class="embed-map"></div>
   <div class="embed-overlay" id="embedOverlay">
-    <h2>🌍 Carte des DMC / Réceptifs</h2>
-    <p>Trouvez votre agence réceptive par destination et spécialité</p>
-    <button class="embed-btn">Explorer la carte</button>
+    <div class="embed-overlay-content">
+      <div class="embed-carousel" id="embedCarousel">
+        <h2>🌍 Carte des DMC / Réceptifs</h2>
+        <p>Trouvez votre agence réceptive</p>
+      </div>
+      <div class="embed-counter">+ de&nbsp;<span class="embed-counter-num" id="embedCounterNum">0</span>&nbsp;réceptifs référencés</div>
+      <button class="embed-btn">Explorer la carte</button>
+    </div>
   </div>
 </div>
 
@@ -326,6 +341,10 @@ body{font-family:'DM Sans',sans-serif;color:var(--text);overflow:hidden;height:1
     <span class="topbar-count" id="topbarCount"></span>
    </div>
    <button class="btn-close" onclick="closeModal()" title="Fermer">✕</button>
+  </div>
+  <div id="bannerSlot" style="display:none;flex-shrink:0;width:100%;overflow:hidden;line-height:0;position:relative">
+    <div id="bannerContent" style="width:100%;overflow:hidden"></div>
+    <button id="bannerClose" onclick="closeBanner()" style="position:absolute;top:4px;right:4px;z-index:10;width:22px;height:22px;border-radius:50%;border:none;background:rgba(0,0,0,0.5);color:#fff;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);transition:background 0.2s" onmouseover="this.style.background='rgba(0,0,0,0.7)'" onmouseout="this.style.background='rgba(0,0,0,0.5)'">✕</button>
   </div>
   <div class="main-layout">
    <div class="sidebar">
@@ -484,10 +503,56 @@ async function loadData() {
     renderMarkers();
     updateCount();
     initEmbedMap();
+    loadBanner();
   } catch(e) {
     console.error('Erreur chargement données DMC:', e);
     document.getElementById('dmcList').innerHTML = '<div class="no-results"><p>Erreur de chargement des données.</p></div>';
   }
+}
+
+async function loadBanner() {
+  try {
+    const snap = await db.collection('banners').where('active', '==', true).get();
+    if (snap.empty) return;
+    const now = new Date();
+    const today = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+    const banner = snap.docs.map(d => d.data()).find(b => {
+      if (b.date_start && b.date_start > today) return false;
+      if (b.date_end && b.date_end < today) return false;
+      return true;
+    });
+    if (!banner) return;
+    const isMobile = window.innerWidth < 768;
+    const html = isMobile ? banner.html_mobile : banner.html_desktop;
+    if (!html || !html.trim()) return;
+    const slot = document.getElementById('bannerSlot');
+    const content = document.getElementById('bannerContent');
+    content.innerHTML = html;
+    // Force responsive images that scale proportionally
+    content.querySelectorAll('img').forEach(img => {
+      img.style.maxWidth = '100%';
+      img.style.width = '100%';
+      img.style.height = 'auto';
+      img.style.display = 'block';
+    });
+    // Hide tracking pixels (1x1)
+    content.querySelectorAll('img[width="1"], img[height="1"]').forEach(img => {
+      img.style.display = 'none';
+    });
+    // Force max-width on injected wrapper divs
+    content.querySelectorAll('div').forEach(div => {
+      div.style.maxWidth = '100%';
+    });
+    slot.style.display = 'block';
+    // Tell Leaflet to recalculate after banner appears
+    setTimeout(() => { if (mainMap) mainMap.invalidateSize(); }, 200);
+  } catch(e) { console.error('Erreur chargement bannière:', e); }
+}
+
+function closeBanner() {
+  document.getElementById('bannerSlot').style.display = 'none';
+  // Tell Leaflet to recalculate after banner disappears
+  setTimeout(() => { if (mainMap) mainMap.invalidateSize(); }, 100);
 }
 
 // =====================================================================
@@ -989,14 +1054,53 @@ function initEmbedMap() {
     doubleClickZoom: false, touchZoom: false, keyboard: false, attributionControl: false
   }).setView([30, 10], 2);
   L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(embedMapInstance);
+  let dotIdx = 0;
   allDMC.forEach(dmc => {
     (dmc.coordinates || []).forEach(coord => {
       if (coord.lat == null || coord.lng == null) return;
-      L.circleMarker([coord.lat, coord.lng], {
-        radius: 4, fillColor: '#2CB5C8', fillOpacity: 0.8, color: '#fff', weight: 1
-      }).addTo(embedMapInstance);
+      const icon = L.divIcon({
+        className: '',
+        iconSize: [8, 8],
+        iconAnchor: [4, 4],
+        html: '<div class="embed-dot-pulse" style="animation-delay:' + (dotIdx % 5) * 0.4 + 's"></div>'
+      });
+      L.marker([coord.lat, coord.lng], { icon: icon, interactive: false }).addTo(embedMapInstance);
+      dotIdx++;
     });
   });
+
+  // Counter animation
+  const counterEl = document.getElementById('embedCounterNum');
+  if (counterEl) {
+    let current = 0;
+    const target = 100;
+    const step = Math.ceil(target / 45);
+    const iv = setInterval(() => {
+      current += step;
+      if (current >= target) { current = target; clearInterval(iv); }
+      counterEl.textContent = current;
+    }, 30);
+  }
+
+  // Carousel text rotation
+  const carouselTexts = [
+    { h: '🌍 Carte des DMC / Réceptifs', p: 'Trouvez votre agence réceptive' },
+    { h: '🌍 Albanie, Croatie, Japon…', p: 'et bien d\'autres destinations' },
+    { h: '🌍 Trouvez votre réceptif', p: 'par destination et spécialité' },
+    { h: '🌍 Asie, Afrique, Europe…', p: 'le monde à portée de carte' }
+  ];
+  let carouselIdx = 0;
+  const carouselEl = document.getElementById('embedCarousel');
+  if (carouselEl) {
+    setInterval(() => {
+      carouselEl.style.opacity = '0';
+      setTimeout(() => {
+        carouselIdx = (carouselIdx + 1) % carouselTexts.length;
+        carouselEl.innerHTML = '<h2>' + carouselTexts[carouselIdx].h + '</h2><p>' + carouselTexts[carouselIdx].p + '</p>';
+        carouselEl.style.opacity = '1';
+      }, 400);
+    }, 3500);
+  }
 }
 
 // =====================================================================
@@ -1189,10 +1293,13 @@ function openModal() {
   document.getElementById('modal').classList.add('open');
   document.body.style.overflow = 'hidden';
   try { window.parent.postMessage({ type: 'dmc-map-open' }, '*'); } catch(e) {}
+  // Re-show banner each time the map opens
+  var slot = document.getElementById('bannerSlot');
+  if (slot && slot.querySelector('#bannerContent').innerHTML.trim()) slot.style.display = 'block';
   if (!mainMap) {
     setTimeout(() => { initMainMap(); renderMarkers(); }, 100);
   } else {
-    setTimeout(() => mainMap.invalidateSize(), 100);
+    setTimeout(() => mainMap.invalidateSize(), 200);
   }
 }
 
