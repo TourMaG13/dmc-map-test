@@ -8,7 +8,7 @@
     var embedHeight = container.getAttribute('data-embed-height') || container.getAttribute('data-height') || '400px';
     var fullHeight = container.getAttribute('data-full-height') || '100vh';
     var size = container.getAttribute('data-size');
-    var src = 'https://tourmag13.github.io/dmc-map/index.html' + (size ? '?size=' + size : '');
+    var src = 'https://tourmag13.github.io/dmc-map-test/index.html' + (size ? '?size=' + size : '');
     container.style.width = '100%';
     container.style.height = embedHeight;
     container.style.transition = 'height 0.3s ease';
