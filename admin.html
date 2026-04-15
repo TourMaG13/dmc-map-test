@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin DMC — DestiMaG</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --cyan:#0EA5E9;--cyan-light:#38BDF8;--cyan-dark:#0284C7;--cyan-bg:rgba(14,165,233,.08);
+  --green:#22C55E;--green-bg:rgba(34,197,94,.08);
+  --orange:#F59E0B;--orange-bg:rgba(245,158,11,.08);
+  --red:#EF4444;--red-bg:rgba(239,68,68,.08);
+  --purple:#8B5CF6;--purple-bg:rgba(139,92,246,.08);
+  --dark:#0F172A;--bg:#F8FAFC;--bg-card:#FFF;
+  --border:#E2E8F0;--border-light:#F1F5F9;
+  --text:#0F172A;--text-light:#64748B;--text-lighter:#94A3B8;
+  --radius:10px;--radius-lg:14px;
+  --shadow:0 1px 2px rgba(0,0,0,.04),0 1px 3px rgba(0,0,0,.06);
+  --shadow-md:0 4px 6px rgba(0,0,0,.04),0 2px 4px rgba(0,0,0,.06);
+  --shadow-lg:0 10px 25px rgba(0,0,0,.08)
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased}
+/* LOGIN */
+.login-page{display:flex;min-height:100vh}
+.login-left{flex:1;background:var(--dark);display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;overflow:hidden}
+.login-left::before{content:'';position:absolute;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(14,165,233,.15),transparent 70%);top:-100px;right:-200px}
+.login-left::after{content:'';position:absolute;width:400px;height:400px;border-radius:50%;background:radial-gradient(circle,rgba(34,197,94,.1),transparent 70%);bottom:-100px;left:-100px}
+.login-brand{position:relative;z-index:1;text-align:center;color:#fff}
+.login-brand .logo{font-size:3.5rem;margin-bottom:12px}
+.login-brand h1{font-size:1.6rem;font-weight:800;letter-spacing:-.5px}
+.login-brand p{color:rgba(255,255,255,.5);font-size:.85rem;margin-top:6px}
+.login-right{width:440px;display:flex;align-items:center;justify-content:center;padding:40px}
+.login-form{width:100%}
+.login-form h2{font-size:1.3rem;font-weight:700;margin-bottom:4px}
+.login-form .sub{font-size:.85rem;color:var(--text-light);margin-bottom:28px}
+.field{margin-bottom:18px}
+.field label{display:block;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-light);margin-bottom:5px}
+.field .input-wrap{position:relative}
+.field input{width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:.9rem;font-family:inherit;outline:none;transition:border .2s,box-shadow .2s}
+.field input:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(14,165,233,.12)}
+.field .input-wrap input{padding-right:44px}
+.eye-btn{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:1.1rem;color:var(--text-lighter);padding:2px}
+.login-submit{width:100%;padding:12px;background:var(--cyan);color:#fff;border:none;border-radius:8px;font-size:.9rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s}
+.login-submit:hover{background:var(--cyan-dark);transform:translateY(-1px);box-shadow:var(--shadow-md)}
+.login-error{color:var(--red);font-size:.8rem;margin-top:12px;display:none;text-align:center}
+/* TOPBAR */
+.topbar{background:var(--dark);color:#fff;padding:0 28px;display:flex;align-items:center;justify-content:space-between;height:56px;position:sticky;top:0;z-index:100}
+.topbar-left{display:flex;align-items:center;gap:10px;font-size:.95rem;font-weight:700;letter-spacing:-.3px}
+.topbar-badge{font-size:.62rem;font-weight:700;padding:3px 10px;border-radius:20px;background:linear-gradient(135deg,var(--cyan),var(--green));letter-spacing:.3px}
+.topbar-right{display:flex;align-items:center;gap:14px}
+.topbar-user{font-size:.78rem;color:rgba(255,255,255,.55)}
+.btn-logout{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.8);padding:6px 14px;border-radius:6px;font-size:.78rem;cursor:pointer;font-family:inherit;transition:all .15s}
+.btn-logout:hover{background:rgba(255,255,255,.15)}
+/* TABS */
+.tabs{display:flex;background:var(--bg-card);border-bottom:1px solid var(--border);padding:0 28px;gap:4px}
+.tab{padding:14px 18px;font-size:.82rem;font-weight:600;color:var(--text-lighter);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s}
+.tab:hover{color:var(--text-light)}.tab.active{color:var(--cyan);border-bottom-color:var(--cyan)}
+.app{display:none}.tab-panel{display:none}.tab-panel.active{display:block}
+.container{max-width:1320px;margin:0 auto;padding:24px 28px}
+/* KPI */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:24px}
+.kpi{background:var(--bg-card);border-radius:var(--radius-lg);padding:18px 20px;box-shadow:var(--shadow);border:1px solid var(--border-light);transition:transform .15s;position:relative;overflow:hidden}
+.kpi:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:var(--radius-lg) var(--radius-lg) 0 0}
+.kpi.cy::before{background:var(--cyan)}.kpi.gr::before{background:var(--green)}.kpi.or::before{background:var(--orange)}.kpi.pu::before{background:var(--purple)}
+.kpi-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;margin-bottom:10px}
+.kpi.cy .kpi-icon{background:var(--cyan-bg)}.kpi.gr .kpi-icon{background:var(--green-bg)}.kpi.or .kpi-icon{background:var(--orange-bg)}.kpi.pu .kpi-icon{background:var(--purple-bg)}
+.kpi-value{font-size:1.7rem;font-weight:800;letter-spacing:-.5px;line-height:1}
+.kpi.cy .kpi-value{color:var(--cyan)}.kpi.gr .kpi-value{color:var(--green)}.kpi.or .kpi-value{color:var(--orange)}.kpi.pu .kpi-value{color:var(--purple)}
+.kpi-label{font-size:.72rem;color:var(--text-lighter);font-weight:500;margin-top:3px}
+/* TOOLBAR */
+.toolbar{display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap}
+.toolbar-search{flex:1;min-width:220px;position:relative}
+.toolbar-search input{width:100%;padding:10px 14px 10px 38px;border:1.5px solid var(--border);border-radius:8px;font-size:.85rem;font-family:inherit;background:var(--bg-card);outline:none;transition:border .2s}
+.toolbar-search input:focus{border-color:var(--cyan)}
+.toolbar-search svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-lighter)}
+.toolbar-select{padding:10px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:.82rem;font-family:inherit;background:var(--bg-card);outline:none;cursor:pointer}
+.toolbar-count{font-size:.82rem;color:var(--text-light);font-weight:600;white-space:nowrap}
+.btn{border:none;padding:10px 18px;border-radius:8px;font-size:.82rem;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;transition:all .15s;display:inline-flex;align-items:center;gap:5px}
+.btn:hover{transform:translateY(-1px)}
+.btn-green{background:var(--green);color:#fff}.btn-orange{background:var(--orange);color:#fff}.btn-cyan{background:var(--cyan);color:#fff}
+.btn-red{background:var(--red-bg);color:var(--red);border:1px solid rgba(239,68,68,.2)}.btn-ghost{background:transparent;color:var(--text-light);border:1.5px solid var(--border)}.btn-ghost:hover{background:var(--bg)}
+/* TABLE */
+.table-wrap{background:var(--bg-card);border-radius:var(--radius-lg);box-shadow:var(--shadow);overflow-x:auto;border:1px solid var(--border-light)}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;padding:12px 16px;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-lighter);background:var(--bg);border-bottom:1px solid var(--border)}
+td{padding:12px 16px;font-size:.83rem;border-bottom:1px solid var(--border-light);vertical-align:middle}
+tr:last-child td{border-bottom:none}tr:hover{background:rgba(14,165,233,.02)}tr.draft-row>td{opacity:.5}tr.draft-row>td:last-child{opacity:1}
+.td-img{width:52px;height:38px;border-radius:6px;object-fit:cover;background:var(--border)}
+.td-title{font-weight:700;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.td-dest{font-size:.77rem;color:var(--text-light);max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.td-status{display:inline-flex;align-items:center;font-size:.68rem;font-weight:700;padding:3px 10px;border-radius:20px}
+.td-status.published{background:var(--green-bg);color:#16A34A}.td-status.draft{background:var(--orange-bg);color:#B45309}.td-status.sponsored{background:linear-gradient(135deg,rgba(245,158,11,.12),rgba(239,68,68,.08));color:#D97706;border:1px solid rgba(245,158,11,.2)}
+.td-tags{display:flex;flex-wrap:wrap;gap:3px}
+.td-tag{font-size:.62rem;padding:2px 7px;background:var(--bg);border:1px solid var(--border);border-radius:20px;color:var(--text-light)}
+.td-actions{display:flex;gap:4px;align-items:center}
+.btn-act{border:1.5px solid var(--border);padding:5px 10px;border-radius:6px;font-size:.7rem;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;transition:all .15s;background:var(--bg-card);color:var(--text-light);display:inline-flex;align-items:center;gap:3px}
+.btn-act:hover{transform:translateY(-1px);box-shadow:var(--shadow)}
+.btn-act-preview{color:var(--cyan);border-color:rgba(14,165,233,.3)}.btn-act-preview:hover{background:var(--cyan-bg);border-color:var(--cyan)}
+.btn-act-edit{background:var(--cyan);color:#fff;border-color:var(--cyan)}.btn-act-edit:hover{background:var(--cyan-dark);border-color:var(--cyan-dark)}
+/* Action dropdown */
+.act-more{position:relative}
+.act-more-btn{width:30px;height:30px;border-radius:6px;border:1.5px solid var(--border);background:var(--bg-card);cursor:pointer;font-size:.9rem;display:flex;align-items:center;justify-content:center;color:var(--text-lighter);transition:all .15s}
+.act-more-btn:hover{border-color:var(--text-lighter);color:var(--text);background:var(--bg)}
+.act-dropdown{display:none;position:absolute;right:0;top:100%;margin-top:4px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;box-shadow:var(--shadow-lg);z-index:50;min-width:160px;padding:4px;overflow:hidden}
+.act-more.open .act-dropdown{display:block}
+.act-drop-item{display:flex;align-items:center;gap:6px;width:100%;padding:7px 12px;border:none;background:none;font-size:.76rem;font-weight:500;font-family:inherit;cursor:pointer;color:var(--text);border-radius:5px;transition:background .1s}
+.act-drop-item:hover{background:var(--bg)}
+.act-drop-item.sponsor{color:#D97706}.act-drop-item.sponsor:hover{background:var(--orange-bg)}
+.act-drop-item.status{color:var(--text-light)}
+.act-drop-item.dup{color:var(--green)}.act-drop-item.dup:hover{background:var(--green-bg)}
+.act-drop-item.delete{color:var(--red)}.act-drop-item.delete:hover{background:var(--red-bg)}
+.act-drop-sep{height:1px;background:var(--border);margin:4px 8px}
+/* MODAL */
+.modal-bg{position:fixed;inset:0;background:rgba(15,23,42,.6);z-index:200;display:none;align-items:center;justify-content:center;padding:20px;overflow-y:auto;backdrop-filter:blur(4px)}.modal-bg.open{display:flex}
+.modal{background:var(--bg-card);border-radius:var(--radius-lg);width:100%;max-width:780px;box-shadow:var(--shadow-lg);margin-top:20px;border:1px solid var(--border-light)}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:18px 24px;border-bottom:1px solid var(--border)}
+.modal-header h2{font-size:1.05rem;font-weight:700}
+.modal-close{background:var(--bg);border:1px solid var(--border);width:32px;height:32px;border-radius:8px;font-size:1rem;cursor:pointer;color:var(--text-light);display:flex;align-items:center;justify-content:center}
+.modal-close:hover{background:var(--red-bg);color:var(--red)}
+.modal-body{padding:24px;max-height:72vh;overflow-y:auto}
+.modal-footer{padding:16px 24px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end}
+.form-row{display:flex;gap:16px;margin-bottom:16px}
+.form-field{flex:1;min-width:0}
+.form-field label{display:block;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-light);margin-bottom:5px}
+.form-field input,.form-field textarea,.form-field select{width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:.85rem;font-family:inherit;outline:none;background:#fff;transition:border .2s}
+.form-field input:focus,.form-field textarea:focus{border-color:var(--cyan)}
+.form-field textarea{resize:vertical;min-height:80px}
+.form-field input[readonly]{background:var(--bg);color:var(--text-light)}
+.form-hint{font-size:.68rem;color:var(--text-lighter);margin-top:3px}
+.form-tag-section{margin:20px 0 10px;padding:14px 0 0;border-top:1px solid var(--border)}
+.form-tag-section-title{font-size:.78rem;font-weight:800;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px}
+.form-tag-section-title.clientele{color:var(--cyan)}.form-tag-section-title.prestations{color:var(--green)}.form-tag-section-title.activites{color:var(--orange)}
+.form-tag-group{margin-bottom:12px}
+.form-tag-group-header{font-size:.7rem;font-weight:700;color:var(--text-lighter);margin-bottom:6px}
+.form-tag-chips{display:flex;flex-wrap:wrap;gap:6px}
+.form-picto-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 12px 4px 5px;border:1.5px solid var(--border);border-radius:20px;font-size:.72rem;font-weight:600;color:var(--text-light);cursor:pointer;transition:all .15s;user-select:none;background:#fff}
+.form-picto-chip img{width:22px;height:22px;flex-shrink:0;border-radius:50%}
+.form-picto-chip:hover{border-color:var(--cyan);color:var(--cyan);background:var(--cyan-bg)}
+.form-picto-chip.active{background:var(--cyan);color:#fff;border-color:var(--cyan);box-shadow:0 2px 8px rgba(14,165,233,.25)}
+.form-picto-chip.active.prestations{background:var(--green);border-color:var(--green);box-shadow:0 2px 8px rgba(34,197,94,.25)}
+.form-picto-chip.active.activites{background:var(--orange);border-color:var(--orange);box-shadow:0 2px 8px rgba(245,158,11,.25)}
+.form-picto-chip.active img{filter:brightness(0) invert(1)}
+.form-picto-chip[style*="--act-bg"].active{background:var(--purple)!important;border-color:var(--purple)!important;color:#fff!important;box-shadow:0 2px 8px rgba(139,92,246,.25)}
+/* Alpha separator */
+.alpha-sep td{background:var(--bg)!important;font-weight:800;font-size:.85rem;color:var(--text);padding:6px 12px!important;letter-spacing:.5px;border-bottom:2px solid var(--cyan)!important}
+.sponsored-row{background:rgba(245,158,11,.03)}
+/* Back to top */
+.btn-top{position:fixed;bottom:24px;right:24px;z-index:150;background:var(--cyan);color:#fff;border:none;padding:10px 16px;border-radius:30px;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 4px 16px rgba(14,165,233,.3);transition:all .2s;opacity:0;pointer-events:none;transform:translateY(10px)}
+.btn-top.visible{opacity:1;pointer-events:auto;transform:translateY(0)}
+.btn-top:hover{background:var(--cyan-dark);transform:translateY(-2px)}
+/* Accordion */
+.form-accordion{border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:10px;overflow:hidden}
+.form-accordion-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:pointer;user-select:none;transition:background .15s}
+.form-accordion-header:hover{background:rgba(0,0,0,.02)}
+.form-accordion-header .acc-title{font-size:.82rem;font-weight:700;letter-spacing:.3px}
+.form-accordion-header .acc-arrow{transition:transform .2s;font-size:.7rem}
+.form-accordion-header.open .acc-arrow{transform:rotate(180deg)}
+.form-accordion-body{max-height:0;overflow:hidden;transition:max-height .3s ease}
+.form-accordion-body.open{max-height:3000px}
+/* Checkbox grid for destinations */
+.form-check-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:3px;max-height:250px;overflow-y:auto;padding:8px;border:1px solid var(--border);border-radius:var(--radius);background:#fff}
+.form-check-item{display:flex;align-items:center;gap:5px;padding:2px 4px;font-size:.75rem;border-radius:4px;cursor:pointer;transition:background .1s}
+.form-check-item:hover{background:var(--bg)}
+.form-check-item input{accent-color:var(--cyan);margin:0;width:14px;height:14px}
+.form-check-search{width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:.78rem;margin-bottom:6px}
+/* PREVIEW */
+.preview-bg{position:fixed;inset:0;background:rgba(15,23,42,.6);z-index:210;display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}.preview-bg.open{display:flex}
+.preview-card{background:var(--bg-card);border-radius:var(--radius-lg);width:100%;max-width:520px;box-shadow:var(--shadow-lg);overflow:hidden;max-height:90vh;overflow-y:auto;border:1px solid var(--border-light)}
+.preview-img{width:100%;height:220px;object-fit:cover;object-position:top;display:block;background:var(--border)}
+.preview-body{padding:24px}
+.preview-title{font-size:1.2rem;font-weight:800;letter-spacing:-.3px;margin-bottom:6px}
+.preview-desc{font-size:.85rem;color:var(--text-light);line-height:1.6;margin-bottom:16px}
+.preview-meta{font-size:.75rem;color:var(--text-lighter);margin-bottom:12px;display:flex;flex-wrap:wrap;gap:6px}
+.preview-meta span{background:var(--bg);padding:3px 10px;border-radius:20px;border:1px solid var(--border)}
+.preview-section{margin-top:14px;padding-top:12px;border-top:1px solid var(--border)}
+.preview-section-title{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.preview-section-title.c1{color:var(--cyan)}.preview-section-title.c2{color:var(--green)}.preview-section-title.c3{color:var(--orange)}
+.preview-tags{display:flex;flex-wrap:wrap;gap:5px}
+.preview-tag{display:inline-flex;align-items:center;gap:4px;padding:3px 10px 3px 4px;border-radius:20px;font-size:.72rem;font-weight:600;border:1px solid var(--border);background:#fff}
+.preview-tag img{width:20px;height:20px;border-radius:50%}
+.preview-footer{padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.preview-link{font-size:.8rem;color:var(--cyan);text-decoration:none;font-weight:600}.preview-link:hover{text-decoration:underline}
+/* CHARTS */
+.chart-card{background:var(--bg-card);border-radius:var(--radius-lg);padding:20px 24px;box-shadow:var(--shadow);margin-bottom:18px;border:1px solid var(--border-light)}
+.chart-card h3{font-size:.88rem;font-weight:700;margin-bottom:14px}
+.chart-wrap{position:relative;height:260px}
+.chart-wrap.sm{height:200px}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.stats-table{width:100%;border-collapse:collapse}
+.stats-table th{text-align:left;padding:8px 12px;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-lighter);border-bottom:1px solid var(--border)}
+.stats-table td{padding:8px 12px;font-size:.82rem;border-bottom:1px solid var(--border-light)}
+/* TOAST / CONFIRM */
+.toast{position:fixed;bottom:24px;right:24px;padding:14px 22px;border-radius:var(--radius);color:#fff;font-size:.85rem;font-weight:600;z-index:300;transform:translateY(80px);opacity:0;transition:all .3s;box-shadow:var(--shadow-lg)}
+.toast.show{transform:translateY(0);opacity:1}.toast.success{background:var(--green)}.toast.error{background:var(--red)}.toast.info{background:var(--cyan)}
+.confirm-bg{position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:250;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px)}.confirm-bg.open{display:flex}
+.confirm-box{background:#fff;border-radius:var(--radius-lg);padding:28px;max-width:420px;text-align:center;box-shadow:var(--shadow-lg)}
+.confirm-box p{font-size:.9rem;margin-bottom:20px;line-height:1.6}
+.confirm-btns{display:flex;gap:10px;justify-content:center}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+@media(max-width:900px){.login-left{display:none}.login-right{width:100%}}
+@media(max-width:768px){.form-row{flex-direction:column}.toolbar{flex-direction:column;align-items:stretch}.container{padding:16px}.kpi-grid{grid-template-columns:1fr 1fr}.two-col{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="login-page" id="loginPage">
+  <div class="login-left"><div class="login-brand"><div class="logo">🌍</div><h1>DestiMaG</h1><p>Gestion des DMC &amp; Réceptifs</p></div></div>
+  <div class="login-right"><div class="login-form">
+    <h2>Bienvenue</h2><p class="sub">Connectez-vous pour accéder au back-office</p>
+    <div class="field"><label>Email</label><input type="email" id="loginEmail" placeholder="votre@email.com"></div>
+    <div class="field"><label>Mot de passe</label><div class="input-wrap"><input type="password" id="loginPass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"><button class="eye-btn" onclick="togglePassword()" type="button" tabindex="-1">👁</button></div></div>
+    <button class="login-submit" onclick="doLogin()">Se connecter</button>
+    <div class="login-error" id="loginError"></div>
+  </div></div>
+</div>
+<div class="app" id="app">
+  <div class="topbar"><div class="topbar-left">🌍 DestiMaG — DMC <span class="topbar-badge" id="topbarRole"></span></div><div class="topbar-right"><span class="topbar-user" id="topbarUser"></span><button class="btn-logout" onclick="doLogout()">Déconnexion</button></div></div>
+  <div class="tabs"><div class="tab active" onclick="switchTab('fiches')">📋 Fiches</div><div class="tab" id="tabStats" onclick="switchTab('stats')" style="display:none">📊 Analytics</div><div class="tab" id="tabUsers" onclick="switchTab('users')" style="display:none">👥 Utilisateurs</div></div>
+  <div class="tab-panel active" id="panelFiches"><div class="container">
+    <div class="kpi-grid" id="quickStats"></div>
+    <div class="toolbar">
+      <div class="toolbar-search"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg><input type="text" id="searchInput" placeholder="Rechercher…" oninput="renderTable()"></div>
+      <select class="toolbar-select" id="filterStatus" onchange="renderTable()"><option value="">Tous</option><option value="published">Publiés</option><option value="draft">Brouillons</option><option value="sponsored">Sponsorisés</option></select>
+      <select class="toolbar-select" id="filterContinent" onchange="renderTable()"><option value="">Continent</option></select>
+      <span class="toolbar-count" id="toolbarCount"></span>
+      <button class="btn btn-green" id="btnAdd" onclick="openNew()" style="display:none">+ Ajouter</button>
+      <button class="btn btn-orange" id="btnImport" onclick="importFromJSON()" style="display:none">📥 Import</button>
+      <button class="btn btn-cyan" id="btnExport" onclick="exportToJSON()" style="display:none">📤 Export</button>
+    </div>
+    <div class="table-wrap"><table><thead><tr><th></th><th>DMC</th><th>Destinations</th><th>Continent</th><th>Statut</th><th>Tags</th><th>Actions</th></tr></thead><tbody id="tableBody"></tbody></table></div>
+  </div></div>
+  <div class="tab-panel" id="panelStats"><div class="container">
+    <div class="toolbar" style="margin-bottom:18px">
+      <div class="form-field" style="max-width:170px"><label>Début</label><input type="date" id="statsDateFrom" onchange="renderStats()"></div>
+      <div class="form-field" style="max-width:170px"><label>Fin</label><input type="date" id="statsDateTo" onchange="renderStats()"></div>
+      <button class="btn btn-ghost" onclick="setRange('7d')">7j</button>
+      <button class="btn btn-ghost" onclick="setRange('30d')">30j</button>
+      <button class="btn btn-ghost" onclick="setRange('90d')">90j</button>
+      <button class="btn btn-ghost" onclick="setRange('all')">Tout</button>
+      <div style="flex:1"></div>
+      <button class="btn btn-red" onclick="resetAnalytics()">🗑️ Réinitialiser les stats</button>
+    </div>
+    <div id="statsContent"><p style="text-align:center;padding:60px;color:var(--text-lighter)">Chargement…</p></div>
+  </div></div>
+  <!-- USERS -->
+  <div class="tab-panel" id="panelUsers"><div class="container">
+    <div class="toolbar"><h3 style="flex:1;font-size:1rem">Gestion des utilisateurs</h3><button class="btn btn-green" onclick="openUserNew()">+ Ajouter un utilisateur</button></div>
+    <div class="table-wrap"><table><thead><tr><th>Email</th><th>Nom</th><th>Rôle</th><th>Fiches associées</th><th>Champs modifiables</th><th>Actions</th></tr></thead><tbody id="usersTableBody"></tbody></table></div>
+    <div style="margin-top:16px;padding:16px;background:var(--bg-card);border-radius:var(--radius-lg);border:1px solid var(--border-light);box-shadow:var(--shadow)">
+      <h4 style="font-size:.85rem;margin-bottom:8px">📝 Comment ajouter un réceptif ?</h4>
+      <ol style="font-size:.8rem;color:var(--text-light);padding-left:18px;line-height:1.8">
+        <li>Créer un compte dans <strong>Firebase Console → Authentication</strong> (email + mot de passe)</li>
+        <li>Copier l'<strong>UID</strong> du compte créé</li>
+        <li>Cliquer <strong>+ Ajouter un utilisateur</strong> ci-dessus et renseigner l'UID, le rôle, les fiches et les permissions</li>
+        <li>Partager l'email + mot de passe au réceptif</li>
+      </ol>
+    </div>
+  </div></div>
+</div>
+<button class="btn-top" id="btnTop" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑ Haut</button>
+<div class="modal-bg" id="modalBg" onclick="if(event.target===this)closeModal()"><div class="modal"><div class="modal-header"><h2 id="modalTitle"></h2><button class="modal-close" onclick="closeModal()">✕</button></div><div class="modal-body" id="modalBody"></div><div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal()">Annuler</button><button class="btn btn-cyan" id="btnSave" onclick="saveDMC()">Enregistrer</button></div></div></div>
+<!-- User modal -->
+<div class="modal-bg" id="userModalBg"><div class="modal"><div class="modal-header"><h2 id="userModalTitle">Utilisateur</h2><button class="modal-close" onclick="closeUserModal()">✕</button></div><div class="modal-body" id="userModalBody"></div><div class="modal-footer"><button class="btn btn-ghost" onclick="closeUserModal()">Annuler</button><button class="btn btn-cyan" onclick="saveUser()">Enregistrer</button></div></div></div>
+<div class="confirm-bg" id="confirmBg"><div class="confirm-box"><p id="confirmMsg"></p><div class="confirm-btns"><button class="btn btn-ghost" onclick="closeConfirm()">Annuler</button><button class="btn btn-red" id="confirmYes">Confirmer</button></div></div></div>
+<div class="preview-bg" id="previewBg" onclick="if(event.target===this)closePreview()"><div class="preview-card" id="previewCard"></div></div>
+<div class="toast" id="toast"></div>
+<script>
+firebase.initializeApp({apiKey:"AIzaSyDZ4T1d0YiuxDb116xx8uFHfW9k__vh4FE",authDomain:"destimap-e901b.firebaseapp.com",projectId:"destimap-e901b",storageBucket:"destimap-e901b.firebasestorage.app",messagingSenderId:"903190091312",appId:"1:903190091312:web:410bdeef59aafa451ffff5"});
+const auth=firebase.auth(),db=firebase.firestore(),PICTO='https://www.tourmag.com/docs/FicheDMC/picto_';
+const ADMIN_UID="QRAHUQzp2SVLzCnuNgChKJ8WiW12";
+const ALL_FIELDS=[
+  {id:'title',l:'Titre'},{id:'description',l:'Description'},{id:'url',l:'URL fiche TourMaG'},
+  {id:'image',l:'Image'},{id:'logo_url',l:'Logo réceptif'},{id:'tag_tourmag',l:'Tag TourMaG'},
+  {id:'destinations',l:'Destinations'},{id:'primary_destinations',l:'Destinations principales'},
+  {id:'continents',l:'Continents'},{id:'tags',l:'Tags (clientèle, prestations, activités)'},
+  {id:'date_creation',l:'Date de création'},{id:'status',l:'Statut (publié/brouillon)'},{id:'sponsored',l:'Sponsoring'},{id:'event',l:'Encart événement'}
+];
+const TAG_GROUPS={clientele:{"Clientèle":[{id:"amoureux",l:"En couple"},{id:"association",l:"Association"},{id:"ce_cse",l:"CE / CSE"},{id:"club",l:"Club"},{id:"famille",l:"En famille"},{id:"gay-friendly",l:"Gay friendly"},{id:"groupe-scolaire",l:"Groupes scolaires"},{id:"groupes",l:"Groupes"},{id:"handicap",l:"PMR"},{id:"incentive",l:"Incentive"},{id:"individuel",l:"En solo"},{id:"seniors",l:"Seniors"}]},prestations:{"Accompagnement":[{id:"acceuil",l:"Accueil"},{id:"adaptabilite",l:"Adaptabilité"},{id:"assistance",l:"Assistance"},{id:"visite_guidee",l:"Visite guidée"}],"Éco & Responsable":[{id:"eco_responsable",l:"Éco-responsable"},{id:"nature",l:"Nature"},{id:"slow_tourisme",l:"Slow tourisme"},{id:"tourisme_responsable2",l:"Tourisme responsable"}],"Hébergement & Transport":[{id:"concierge",l:"Conciergerie"},{id:"hotel",l:"Hébergement"},{id:"transferts",l:"Transferts"},{id:"vtc",l:"VTC"}],"MICE & Business":[{id:"conference",l:"Conférences"},{id:"congres",l:"Congrès"},{id:"meeting",l:"Meeting"},{id:"mice",l:"MICE"},{id:"team_building",l:"Team-building"}],"Type de voyage":[{id:"autotour",l:"Autotour"},{id:"circuit",l:"Circuit"},{id:"city",l:"City-break"},{id:"luxe",l:"Luxe"},{id:"sur_mesure",l:"Sur-mesure"}],"Autres prestations":[{id:"creativite",l:"Créativité"},{id:"efficacite",l:"Efficacité"},{id:"medical",l:"Médical"},{id:"passion",l:"Passion"}]},activites:{"Bien-être & Spirituel":[{id:"massage",l:"Bien-être"},{id:"spirituel",l:"Spirituel"},{id:"yoga",l:"Yoga"}],"Culture & Patrimoine":[{id:"archeologie",l:"Archéologie"},{id:"architecture",l:"Architecture"},{id:"culture",l:"Culture"},{id:"culture_patrimoine",l:"Culture et patrimoine"},{id:"decouverte",l:"Découverte"},{id:"histoire",l:"Histoire"},{id:"village",l:"Village"}],"Événements & Loisirs":[{id:"attractions",l:"Attractions"},{id:"carnaval",l:"Carnaval"},{id:"casino",l:"Casino"},{id:"concert",l:"Concerts"},{id:"feu_d_artifice",l:"Feu d'artifice"},{id:"illuminations",l:"Illuminations"},{id:"noel",l:"Noël"},{id:"nouvel_an",l:"Nouvel an"},{id:"soiree_gala",l:"Soirées de gala"}],"Gastronomie & Terroir":[{id:"resto",l:"Gastronomie"},{id:"oenologie",l:"Œnologie"},{id:"permaculture",l:"Permaculture"},{id:"vendanges",l:"Vendanges"}],"Nature & Animaux":[{id:"aventure",l:"Aventure"},{id:"insecte",l:"Entomologie"},{id:"jardin",l:"Jardin"},{id:"observation_animale",l:"Observation animale"},{id:"safari2",l:"Safari"}],"Randonnée & Montagne":[{id:"rando-contee",l:"Balade contée"},{id:"escalade",l:"Escalade"},{id:"escalade-rando",l:"Escalade-Rando"},{id:"montagne",l:"Montagne"},{id:"rando",l:"Randonnée"},{id:"raquettes",l:"Raquettes"},{id:"trail",l:"Trail"},{id:"trekking",l:"Trekking"},{id:"viaferrata",l:"Via Ferrata"}],"Sport & Plein air":[{id:"accrobranche",l:"Accrobranche"},{id:"biathlon",l:"Biathlon"},{id:"equitation",l:"Équitation"},{id:"golf",l:"Golf"},{id:"ski",l:"Ski"},{id:"ski-de-fond",l:"Ski de rando"},{id:"sport",l:"Sport"},{id:"velo",l:"Vélo"}],"Sports nautiques":[{id:"canoe",l:"Canoë"},{id:"char-a-voile",l:"Char à voile"},{id:"kite",l:"Kitesurf"},{id:"bateau",l:"Navigation"},{id:"peche",l:"Pêche"},{id:"plongee",l:"Plongée"},{id:"rafting",l:"Rafting"},{id:"snorkeling",l:"Snorkeling"},{id:"surf",l:"Surf"}],"Divers":[{id:"peinture",l:"Aquarelle"},{id:"manuel",l:"Artisanat"},{id:"astronomie",l:"Astronomie"},{id:"ane",l:"Avec des ânes"},{id:"source-eau-chaude",l:"Bains d'eaux chaudes"},{id:"cadeau",l:"Coffrets cadeaux"},{id:"excursions",l:"Excursions"},{id:"genealogie",l:"Généalogie"},{id:"surpris",l:"Insolite"},{id:"liguistique",l:"Linguistique"},{id:"mode",l:"Mode"},{id:"montgolfiere",l:"Montgolfière"},{id:"thematique",l:"Multi activités"},{id:"traineau",l:"Mushing"},{id:"train",l:"Petit train"},{id:"photo",l:"Photographie"},{id:"druide",l:"Rencontre druidique"},{id:"video",l:"Vidéo"},{id:"avion-2",l:"Vol privatisé"},{id:"voyage",l:"Voyage"},{id:"voyage_de_noce",l:"Voyage de noces"}]}};
+let currentUser=null,currentRole=null,allDMC=[],allUsers=[],editingId=null,editingUserId=null,charts={};
+
+function togglePassword(){const i=document.getElementById('loginPass'),b=i.nextElementSibling;if(i.type==='password'){i.type='text';b.textContent='🙈'}else{i.type='password';b.textContent='👁'}}
+auth.onAuthStateChanged(async u=>{if(u){currentUser=u;
+  let info;
+  if(u.uid===ADMIN_UID){info={role:'admin',label:'Admin TourMaG',editableFields:ALL_FIELDS.map(f=>f.id)};try{localStorage.setItem('dmc_admin_notrack','1')}catch(e){}}
+  else{try{const doc=await db.collection('users').doc(u.uid).get();if(doc.exists)info=doc.data();} catch(e){}}
+  if(!info){showToast('Accès non autorisé.','error');auth.signOut();return}
+  currentRole=info;
+  document.getElementById('loginPage').style.display='none';document.getElementById('app').style.display='block';
+  document.getElementById('topbarUser').textContent=u.email;document.getElementById('topbarRole').textContent=info.label||info.role;
+  // Reset all admin elements
+  document.getElementById('tabUsers').style.display='none';
+  document.getElementById('tabStats').style.display='none';
+  ['btnAdd','btnImport','btnExport'].forEach(id=>document.getElementById(id).style.display='none');
+  if(info.role==='admin'){['btnAdd','btnImport','btnExport'].forEach(id=>document.getElementById(id).style.display='');document.getElementById('tabUsers').style.display='';document.getElementById('tabStats').style.display=''}
+  loadDMC()}else{document.getElementById('loginPage').style.display='';document.getElementById('app').style.display='none'}});
+function doLogin(){const e=document.getElementById('loginEmail').value.trim(),p=document.getElementById('loginPass').value,err=document.getElementById('loginError');err.style.display='none';auth.signInWithEmailAndPassword(e,p).catch(()=>{err.style.display='block';err.textContent='Email ou mot de passe incorrect.'})}
+function doLogout(){auth.signOut()}
+function switchTab(n){
+  if(n==='users'&&currentRole.role!=='admin')return;
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',(n==='fiches'&&i===0)||(n==='stats'&&i===1)||(n==='users'&&i===2)));
+  document.getElementById('panelFiches').classList.toggle('active',n==='fiches');
+  document.getElementById('panelStats').classList.toggle('active',n==='stats');
+  document.getElementById('panelUsers').classList.toggle('active',n==='users');
+  if(n==='stats'&&!document.getElementById('statsDateFrom').value)setRange('30d');
+  if(n==='users')loadUsers();
+}
+async function loadDMC(){try{const snap=await db.collection('dmc').orderBy('title').get();allDMC=snap.docs.map(d=>({id:d.id,...d.data()}));const conts=new Set();allDMC.forEach(d=>(d.continents||[]).forEach(c=>conts.add(c)));const sel=document.getElementById('filterContinent');sel.innerHTML='<option value="">Continent</option>';[...conts].sort().forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;sel.appendChild(o)});renderQuickStats();renderTable()}catch(e){console.error(e);showToast('Erreur chargement','error')}}
+function renderQuickStats(){if(currentRole.role!=='admin'){document.getElementById('quickStats').style.display='none';return}const t=allDMC.length,p=allDMC.filter(d=>d.status!=='draft').length,dr=t-p,cs=new Set();allDMC.forEach(d=>(d.primary_destinations||d.destinations||[]).forEach(c=>cs.add(c)));document.getElementById('quickStats').innerHTML=`<div class="kpi cy"><div class="kpi-icon">📋</div><div class="kpi-value">${t}</div><div class="kpi-label">DMC total</div></div><div class="kpi gr"><div class="kpi-icon">✅</div><div class="kpi-value">${p}</div><div class="kpi-label">Publiés</div></div><div class="kpi or"><div class="kpi-icon">📝</div><div class="kpi-value">${dr}</div><div class="kpi-label">Brouillons</div></div><div class="kpi pu"><div class="kpi-icon">🌍</div><div class="kpi-value">${cs.size}</div><div class="kpi-label">Destinations</div></div>`}
+function renderTable(){const search=document.getElementById('searchInput').value.toLowerCase().trim(),sf=document.getElementById('filterStatus').value,cf=document.getElementById('filterContinent').value;let list=allDMC;if(currentRole.role==='dmc'&&currentRole.dmcUrls)list=list.filter(d=>currentRole.dmcUrls.includes(d.url));if(search)list=list.filter(d=>[d.title,...(d.destinations||[]),...(d.primary_destinations||[])].join(' ').toLowerCase().includes(search));if(sf==='sponsored')list=list.filter(d=>d.sponsored===true);else if(sf)list=list.filter(d=>sf==='draft'?d.status==='draft':d.status!=='draft');if(cf)list=list.filter(d=>(d.continents||[]).includes(cf));
+  list.sort((a,b)=>(a.title||'').localeCompare(b.title||'','fr'));
+  document.getElementById('toolbarCount').textContent=list.length+' DMC';const ro=currentRole.role==='lecteur',adm=currentRole.role==='admin';const tb=document.getElementById('tableBody');if(!list.length){tb.innerHTML='<tr><td colspan="7" style="text-align:center;padding:50px;color:var(--text-lighter)">Aucun DMC trouvé</td></tr>';return}
+  let lastLetter='',html='';
+  list.forEach(d=>{
+    const firstLetter=(d.title||'?')[0].toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    if(firstLetter!==lastLetter){lastLetter=firstLetter;html+=`<tr class="alpha-sep"><td colspan="7">${firstLetter}</td></tr>`}
+    const dests=(d.primary_destinations||d.destinations||[]).slice(0,3).join(', '),conts=(d.continents||[]).join(', '),isDr=d.status==='draft',isSpon=d.sponsored===true,st=(isSpon?'<span class="td-status sponsored">⭐ Sponsorisé</span> ':'')+(d.event_active?'<span class="td-status" style="background:rgba(14,165,233,.08);color:var(--cyan-dark);border:1px solid rgba(14,165,233,.2)">🎪 Événement</span> ':'')+(isDr?'<span class="td-status draft">Brouillon</span>':'<span class="td-status published">Publié</span>'),tags=[...(d.tags?.clientele||[]).slice(0,1),...(d.tags?.prestations||[]).slice(0,2)].map(t=>`<span class="td-tag">${t.label}</span>`).join(''),sT=(d.title||'').replace(/'/g,"\\'");
+    let act='';if(ro){act=`<button class="btn-act btn-act-preview" onclick="previewDMC('${d.id}')">👁 Voir</button>`}else{act=`<button class="btn-act btn-act-preview" onclick="previewDMC('${d.id}')">👁 Voir</button><button class="btn-act btn-act-edit" onclick="openEdit('${d.id}')">✏️ Modifier</button>${adm?`<div class="act-more" id="actMore_${d.id}"><button class="act-more-btn" onclick="event.stopPropagation();toggleActMenu('${d.id}')">⋯</button><div class="act-dropdown"><button class="act-drop-item sponsor" onclick="toggleActMenu('${d.id}');toggleSponsored('${d.id}',${isSpon})">${isSpon?'⭐ Retirer sponsoring':'⭐ Sponsoriser'}</button><button class="act-drop-item status" onclick="toggleActMenu('${d.id}');toggleDraft('${d.id}',${isDr})">${isDr?'▶️ Publier':'⏸️ Dépublier'}</button><button class="act-drop-item dup" onclick="toggleActMenu('${d.id}');duplicateDMC('${d.id}')">📋 Dupliquer la fiche</button><div class="act-drop-sep"></div><button class="act-drop-item delete" onclick="toggleActMenu('${d.id}');askDelete('${d.id}','${sT}')">🗑️ Supprimer</button></div></div>`:''}`}
+    html+=`<tr class="${isDr?'draft-row':''}${isSpon?' sponsored-row':''}"><td>${d.image?`<img class="td-img" src="${d.image}" onerror="this.style.display='none'">`:'<div class="td-img"></div>'}</td><td class="td-title">${d.title||'(sans titre)'}</td><td class="td-dest">${dests}</td><td class="td-dest">${conts}</td><td>${st}</td><td><div class="td-tags">${tags}</div></td><td><div class="td-actions">${act}</div></td></tr>`;
+  });tb.innerHTML=html}
+async function toggleSponsored(id,wasSpon){try{await db.collection('dmc').doc(id).update({sponsored:!wasSpon,updated_at:firebase.firestore.FieldValue.serverTimestamp(),updated_by:currentUser.email});showToast(wasSpon?'Sponsoring retiré':'DMC sponsorisé ⭐','info');await loadDMC()}catch(e){showToast('Erreur: '+e.message,'error')}}
+async function toggleDraft(id,was){try{await db.collection('dmc').doc(id).update({status:was?'published':'draft',updated_at:firebase.firestore.FieldValue.serverTimestamp(),updated_by:currentUser.email});showToast(was?'Publié !':'En brouillon','info');await loadDMC()}catch(e){showToast('Erreur: '+e.message,'error')}}
+async function duplicateDMC(id){const d=allDMC.find(x=>x.id===id);if(!d)return;try{const c={...d};delete c.id;c.title=(c.title||'')+' (copie)';c.status='draft';c.created_at=firebase.firestore.FieldValue.serverTimestamp();c.updated_at=firebase.firestore.FieldValue.serverTimestamp();c.updated_by=currentUser.email;await db.collection('dmc').add(c);showToast('Dupliqué','success');await loadDMC()}catch(e){showToast('Erreur: '+e.message,'error')}}
+function askDelete(id,title){document.getElementById('confirmMsg').innerHTML=`Supprimer <strong>${title}</strong> ?<br><span style="font-size:.8rem;color:var(--text-light)">Irréversible.</span>`;document.getElementById('confirmYes').onclick=()=>{closeConfirm();deleteDMC(id)};document.getElementById('confirmBg').classList.add('open')}
+function closeConfirm(){document.getElementById('confirmBg').classList.remove('open')}
+async function deleteDMC(id){try{await db.collection('dmc').doc(id).delete();showToast('Supprimé','success');await loadDMC()}catch(e){showToast('Erreur: '+e.message,'error')}}
+function openEdit(id){switchTab('fiches');const d=allDMC.find(x=>x.id===id);if(!d)return;editingId=id;document.getElementById('modalTitle').textContent='Modifier : '+(d.title||'');renderForm(d);document.getElementById('modalBg').classList.add('open');window.scrollTo({top:0});
+  const isRO=currentRole.role==='lecteur';
+  const editable=currentRole.editableFields||[];
+  document.getElementById('btnSave').style.display=isRO?'none':'';
+  if(isRO){document.querySelectorAll('#modalBody input,#modalBody textarea,#modalBody select').forEach(el=>el.setAttribute('readonly',true));document.querySelectorAll('#modalBody .form-picto-chip').forEach(el=>el.style.pointerEvents='none')}
+  else if(currentRole.role==='dmc'){
+    // Lock ALL fields not in editableFields
+    const fieldMap={
+      'fTitle':'title','fDesc':'description','fImage':'image','fLogo':'logo_url',
+      'fUrl':'url','fTagTourmag':'tag_tourmag','fDate':'date_creation','fStatus':'status'
+    };
+    Object.entries(fieldMap).forEach(([elId,fieldId])=>{
+      const el=document.getElementById(elId);
+      if(el&&!editable.includes(fieldId)){el.setAttribute('readonly',true);el.setAttribute('disabled',true);el.style.opacity='.5'}
+    });
+    // Lock destination checkboxes
+    if(!editable.includes('primary_destinations')){
+      document.querySelectorAll('input[name="fPrimary"]').forEach(cb=>{cb.disabled=true});
+      const grid=document.getElementById('fPrimaryChecks');if(grid)grid.style.opacity='.5';
+    }
+    if(!editable.includes('destinations')){
+      document.querySelectorAll('input[name="fDest"]').forEach(cb=>{cb.disabled=true});
+      const grid=document.getElementById('fDestChecks');if(grid)grid.style.opacity='.5';
+    }
+    if(!editable.includes('continents')){
+      document.querySelectorAll('input[name="fCont"]').forEach(cb=>{cb.disabled=true});
+    }
+    // Lock tags
+    if(!editable.includes('tags')){document.querySelectorAll('#modalBody .form-picto-chip').forEach(el=>el.style.pointerEvents='none');document.querySelectorAll('.form-tag-section').forEach(el=>el.style.opacity='.5')}
+    // Lock sponsoring (not editable by DMC users)
+    if(!editable.includes('sponsored')){/* sponsoring is admin-only anyway */}
+    // Lock event encart
+    if(!editable.includes('event')){
+      ['fEventActive','fEventImage','fEventTitle','fEventText','fEventStand','fEventBtnText','fEventBtnUrl'].forEach(id=>{
+        const el=document.getElementById(id);if(el){el.setAttribute('disabled',true);el.style.opacity='.5'}
+      });
+    }
+  }}
+function openNew(){editingId=null;document.getElementById('modalTitle').textContent='Ajouter un DMC';renderForm({status:'published'});document.getElementById('modalBg').classList.add('open');document.getElementById('btnSave').style.display=''}
+function closeModal(){document.getElementById('modalBg').classList.remove('open');editingId=null}
+
+const ALL_COUNTRIES=["Afghanistan","Afrique du Sud","Albanie","Algérie","Allemagne","Amazonie","Andorre","Angola","Arabie Saoudite","Argentine","Arménie","Australie","Autriche","Azerbaïdjan","Açores","Bahamas","Bangladesh","Belgique","Belize","Bhoutan","Biélorussie","Birmanie","Bolivie","Bosnie-Herzégovine","Botswana","Brésil","Brunei","Bulgarie","Burkina Faso","Cambodge","Cameroun","Canada","Cap Vert","Chili","Chine","Chypre","Colombie","Corée du Nord","Corée du Sud","Costa Rica","Croatie","Crète","Cuba","Danemark","Dominique","Ecosse","Egypte","Émirats Arabes Unis","Equateur","Espagne","Estonie","États-Unis","Ethiopie","Fidji","Finlande","France","Gabon","Géorgie","Ghana","Grèce","Guatemala","Guinée","Guinée-Bissau","Guyane","Guyane française","Honduras","Hongrie","Île Maurice","Île de la Réunion","Iles Baléares","Iles Canaries","Inde","Indonésie","Irak","Iran","Irlande","Islande","Israël","Italie","Jamaïque","Japon","Jordanie","Kazakhstan","Kenya","Kirghizistan","Kosovo","Koweït","La Réunion","Laos","Lettonie","Liban","Libéria","Lituanie","Luxembourg","Macédoine du Nord","Madagascar","Madère","Malaisie","Maldives","Mali","Malte","Maroc","Maurice","Mauritanie","Mexique","Moldavie","Mongolie","Monténégro","Mozambique","Myanmar","Namibie","Népal","Nicaragua","Nigéria","Norvège","Nouvelle-Calédonie","Nouvelle-Zélande","Oman","Ouganda","Ouzbékistan","Pakistan","Palestine","Panama","Papouasie","Paraguay","Pays-Bas","Pérou","Philippines","Pologne","Polynésie Française","Portugal","Pouilles","Qatar","République Dominicaine","République Tchèque","Roumanie","Royaume-Uni","Russie","Rwanda","Sardaigne","Sénégal","Serbie","Seychelles","Sicile","Sierra Leone","Singapour","Slovaquie","Slovénie","Somalie","Soudan","Sri Lanka","Suède","Suisse","Tadjikistan","Tahiti","Taïwan","Tanzanie","Tchad","Thaïlande","Togo","Tunisie","Turkménistan","Turquie","Ukraine","Uruguay","Venezuela","Vietnam","Yémen","Zambie","Zanzibar","Zimbabwe"];
+const ALL_CONTINENTS=["Afrique","Amériques","Asie","Europe","Moyen-Orient","Océan Indien","Océanie"];
+
+function renderForm(dmc){
+  const body=document.getElementById('modalBody');
+  const isAdmin=currentRole.role==='admin';
+  const ct={clientele:new Set((dmc.tags?.clientele||[]).map(t=>t.id)),prestations:new Set((dmc.tags?.prestations||[]).map(t=>t.id)),activites:new Set((dmc.tags?.activites||[]).map(t=>t.id))};
+  const pdSet=new Set((dmc.primary_destinations||[]).map(d=>d.trim()));
+  const dSet=new Set((dmc.destinations||[]).map(d=>d.trim()));
+  const cSet=new Set((dmc.continents||[]).map(c=>c.trim()));
+
+  let h=`<div class="form-row"><div class="form-field"><label>Titre</label><input type="text" id="fTitle" value="${esc(dmc.title||'')}"></div><div class="form-field" style="max-width:160px"><label>Statut</label><select id="fStatus"><option value="published" ${dmc.status!=='draft'?'selected':''}>✅ Publié</option><option value="draft" ${dmc.status==='draft'?'selected':''}>📝 Brouillon</option></select></div></div>`;
+  h+=`<div class="form-row"><div class="form-field"><label>URL fiche TourMaG</label><input type="text" id="fUrl" value="${esc(dmc.url||'')}" ${isAdmin?'':'readonly'}><div class="form-hint">${isAdmin?'Modifiable en tant qu\'admin':'Seul l\'admin peut modifier l\'URL'}</div></div></div>`;
+  h+=`<div class="form-row"><div class="form-field"><label>Tag TourMaG (actualites)</label><input type="text" id="fTagTourmag" value="${esc(dmc.tag_tourmag||'')}"><div class="form-hint">Tag actualites TourMaG (ex: DTH+Travel). Espaces = +</div></div></div>`;
+  h+=`<div class="form-row"><div class="form-field"><label>Image (URL)</label><input type="text" id="fImage" value="${esc(dmc.image||'')}"></div></div>`;
+  h+=`<div class="form-row"><div class="form-field"><label>Logo réceptif (URL) — pour marqueur carte sponsorisé</label><input type="text" id="fLogo" value="${esc(dmc.logo_url||'')}"><div class="form-hint">URL du logo du réceptif (PNG/JPG). Utilisé pour le marqueur rond sur la carte</div></div></div>`;
+
+  // Event encart (IFTM)
+  const ev = dmc.event || {};
+  const evActive = dmc.event_active === true;
+  h+=`<div class="form-accordion" style="margin:16px 0">
+    <div class="form-accordion-header" onclick="this.classList.toggle('open');this.nextElementSibling.classList.toggle('open')">
+      <span class="acc-title">🎪 Encart événement (IFTM / salon)</span>
+      <span class="acc-arrow">▼</span>
+    </div>
+    <div class="form-accordion-body${evActive?' open':''}">
+      <div style="padding:14px">
+        <div class="form-row"><div class="form-field">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+            <input type="checkbox" id="fEventActive" ${evActive?'checked':''} style="accent-color:var(--cyan);width:18px;height:18px">
+            <span style="font-size:.85rem;font-weight:700;color:${evActive?'var(--cyan)':'var(--text-light)'}">Activer l'encart événement</span>
+          </label>
+          <div class="form-hint">Affiche un encart spécial sur la fiche de ce réceptif (salon IFTM, etc.)</div>
+        </div></div>
+        <div class="form-row"><div class="form-field"><label>Image de l'événement (URL)</label><input type="text" id="fEventImage" value="${esc(ev.image||'')}"><div class="form-hint">Bannière ou visuel du salon</div></div></div>
+        <div class="form-row"><div class="form-field"><label>Titre de l'encart</label><input type="text" id="fEventTitle" value="${esc(ev.title||'')}" placeholder="Ex: Retrouvez-nous à l'IFTM Top Resa 2025"></div></div>
+        <div class="form-row"><div class="form-field"><label>Texte libre</label><textarea id="fEventText" placeholder="Description, message, invitation...">${esc(ev.text||'')}</textarea></div></div>
+        <div class="form-row">
+          <div class="form-field"><label>Numéro de stand</label><input type="text" id="fEventStand" value="${esc(ev.stand||'')}" placeholder="Ex: Hall 1 - A42"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-field"><label>Texte du bouton</label><input type="text" id="fEventBtnText" value="${esc(ev.button_text||'')}" placeholder="Ex: Prendre rendez-vous"></div>
+          <div class="form-field"><label>URL du bouton</label><input type="text" id="fEventBtnUrl" value="${esc(ev.button_url||'')}" placeholder="https://..."></div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+
+  h+=`<div class="form-row"><div class="form-field"><label>Description</label><textarea id="fDesc">${esc(dmc.description||'')}</textarea></div></div>`;
+
+  // Continents checkboxes
+  h+=`<div class="form-field" style="margin-bottom:12px"><label>🌐 Continents</label><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">`;
+  ALL_CONTINENTS.forEach(c=>{h+=`<label class="form-check-item" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px"><input type="checkbox" name="fCont" value="${c}" ${cSet.has(c)?'checked':''}> ${c}</label>`});
+  h+=`</div></div>`;
+
+  // Primary destinations checkboxes
+  h+=`<div class="form-field" style="margin-bottom:12px"><label>🏷️ Destination(s) mise(s) en avant par la fiche</label><div class="form-hint" style="margin-bottom:4px">Cocher la ou les destinations que la fiche est chargée de mettre en avant. Les pays choisis seront affichés sous la forme d'un badge bleu sous le titre</div><input class="form-check-search" placeholder="Filtrer les pays…" oninput="filterChecks(this,'fPrimaryChecks')"><div class="form-check-grid" id="fPrimaryChecks">`;
+  ALL_COUNTRIES.forEach(c=>{h+=`<label class="form-check-item"><input type="checkbox" name="fPrimary" value="${c}" ${pdSet.has(c)?'checked':''}> ${c}</label>`});
+  h+=`</div></div>`;
+
+  // Destinations checkboxes
+  h+=`<div class="form-field" style="margin-bottom:12px"><label>🌍 Autres destinations proposées par ce réceptif</label><div class="form-hint" style="margin-bottom:4px">A ne cocher que si le réceptif dispose de plusieurs fiches</div><input class="form-check-search" placeholder="Filtrer les pays…" oninput="filterChecks(this,'fDestChecks')"><div class="form-check-grid" id="fDestChecks">`;
+  ALL_COUNTRIES.forEach(c=>{h+=`<label class="form-check-item"><input type="checkbox" name="fDest" value="${c}" ${dSet.has(c)?'checked':''}> ${c}</label>`});
+  h+=`</div></div>`;
+
+  h+=`<div class="form-row"><div class="form-field"><label>Date de création</label><input type="text" id="fDate" value="${esc(dmc.date_creation||'')}"></div></div>`;
+
+  // Accordion tags
+  const cats=[{key:'clientele',title:'👥 CLIENTÈLE',css:'clientele',color:'var(--cyan)'},{key:'prestations',title:'⚙️ PRESTATIONS',css:'prestations',color:'var(--green)'},{key:'activites',title:'🎯 ACTIVITÉS / THÉMATIQUES',css:'activites',color:'var(--orange)'}];
+  cats.forEach(({key,title,css,color})=>{
+    const active=Array.from(ct[key]);
+    const countLabel=active.length?` (${active.length})` :'';
+    h+=`<div class="form-accordion" style="border-left:3px solid ${color}"><div class="form-accordion-header" onclick="toggleAccordion(this)"><span class="acc-title" style="color:${color}">${title}${countLabel}</span><span class="acc-arrow">▼</span></div><div class="form-accordion-body">`;
+    Object.entries(TAG_GROUPS[key]).forEach(([gName,tags])=>{
+      h+=`<div class="form-tag-group" style="padding:6px 14px"><div class="form-tag-group-header" style="border-bottom:1px solid var(--border);padding-bottom:4px;margin-bottom:6px">${gName}</div><div class="form-tag-chips">`;
+      const seen=new Set();
+      tags.forEach(t=>{if(seen.has(t.l))return;seen.add(t.l);const isA=ct[key].has(t.id);h+=`<div class="form-picto-chip ${isA?'active '+css:''}" data-cat="${key}" data-id="${t.id}" onclick="toggleChip(this)"><img src="${PICTO}${t.id}.png" onerror="this.style.display='none'"><span>${t.l}</span></div>`});
+      h+=`</div></div>`;
+    });h+=`</div></div>`;
+  });body.innerHTML=h;
+}
+function toggleAccordion(el){el.classList.toggle('open');el.nextElementSibling.classList.toggle('open')}
+function filterChecks(input,gridId){const q=input.value.toLowerCase();document.querySelectorAll('#'+gridId+' .form-check-item').forEach(el=>{el.style.display=el.textContent.toLowerCase().includes(q)?'':'none'})}
+function toggleChip(el){if(currentRole.role==='lecteur')return;const cat=el.dataset.cat;el.classList.toggle('active');if(el.classList.contains('active')&&cat!=='clientele')el.classList.add(cat);else el.classList.remove('prestations','activites')}
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')}
+async function saveDMC(){
+  const title=document.getElementById('fTitle').value.trim();if(!title){showToast('Titre obligatoire','error');return}
+  const tags={clientele:[],prestations:[],activites:[]};
+  document.querySelectorAll('.form-picto-chip.active').forEach(el=>{tags[el.dataset.cat].push({id:el.dataset.id,label:el.querySelector('span').textContent})});
+  const primary_destinations=[...document.querySelectorAll('input[name="fPrimary"]:checked')].map(el=>el.value);
+  const destinations=[...document.querySelectorAll('input[name="fDest"]:checked')].map(el=>el.value);
+  const continents=[...document.querySelectorAll('input[name="fCont"]:checked')].map(el=>el.value);
+  const data={title,url:document.getElementById('fUrl').value.trim(),image:document.getElementById('fImage').value.trim(),logo_url:document.getElementById('fLogo').value.trim(),tag_tourmag:document.getElementById('fTagTourmag').value.trim(),description:document.getElementById('fDesc').value.trim(),primary_destinations,destinations,continents,date_creation:document.getElementById('fDate').value.trim(),status:document.getElementById('fStatus').value,tags,updated_at:firebase.firestore.FieldValue.serverTimestamp(),updated_by:currentUser.email,event_active:document.getElementById('fEventActive').checked,event:{image:document.getElementById('fEventImage').value.trim(),title:document.getElementById('fEventTitle').value.trim(),text:document.getElementById('fEventText').value.trim(),stand:document.getElementById('fEventStand').value.trim(),button_text:document.getElementById('fEventBtnText').value.trim(),button_url:document.getElementById('fEventBtnUrl').value.trim()}};
+  try{if(editingId){await db.collection('dmc').doc(editingId).update(data);showToast('Mis à jour !','success')}else{data.created_at=firebase.firestore.FieldValue.serverTimestamp();await db.collection('dmc').add(data);showToast('Ajouté !','success')}closeModal();await loadDMC()}catch(e){showToast('Erreur: '+e.message,'error')}
+}
+async function importFromJSON(){const input=document.createElement('input');input.type='file';input.accept='.json';input.onchange=async(e)=>{const file=e.target.files[0];if(!file)return;try{const json=JSON.parse(await file.text());const arr=json.dmc||json;if(!Array.isArray(arr)){showToast('Format invalide','error');return}if(!confirm('Importer '+arr.length+' DMC ? L\'import peut prendre quelques instants.'))return;const eu=new Set(allDMC.map(d=>d.url));let added=0,skip=0,batchNum=0;const BATCH_SIZE=50;const toAdd=arr.filter(d=>{if(eu.has(d.url)){skip++;return false}return true});showToast('Import en cours… 0/'+toAdd.length,'info');for(let i=0;i<toAdd.length;i+=BATCH_SIZE){const batch=db.batch();const slice=toAdd.slice(i,i+BATCH_SIZE);for(const d of slice){const clean={...d};delete clean.id;delete clean.coordinates;batch.set(db.collection('dmc').doc(),{...clean,status:clean.status||'published',created_at:firebase.firestore.FieldValue.serverTimestamp(),updated_at:firebase.firestore.FieldValue.serverTimestamp(),source:'import'})}await batch.commit();added+=slice.length;batchNum++;showToast('Import… '+added+'/'+toAdd.length,'info');await new Promise(r=>setTimeout(r,300))}showToast(added+' ajoutés, '+skip+' existants','success');await loadDMC()}catch(e){showToast('Erreur: '+e.message,'error')}};input.click()}
+function exportToJSON(){const data={metadata:{exported_at:new Date().toISOString(),count:allDMC.length},dmc:allDMC.map(d=>{const c={...d};delete c.id;return c})};const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='dmc_export_'+new Date().toISOString().slice(0,10)+'.json';a.click();showToast('Export téléchargé','info')}
+
+// === STATS ===
+function setRange(r){
+  const to=document.getElementById('statsDateTo'),from=document.getElementById('statsDateFrom'),now=new Date();
+  to.value=now.toISOString().slice(0,10);
+  if(r==='7d'){const d=new Date(now);d.setDate(d.getDate()-7);from.value=d.toISOString().slice(0,10)}
+  else if(r==='30d'){const d=new Date(now);d.setDate(d.getDate()-30);from.value=d.toISOString().slice(0,10)}
+  else if(r==='90d'){const d=new Date(now);d.setDate(d.getDate()-90);from.value=d.toISOString().slice(0,10)}
+  else{from.value='';to.value=''}
+  renderStats();
+}
+async function resetAnalytics(){
+  document.getElementById('confirmMsg').innerHTML='<strong>Réinitialiser toutes les statistiques ?</strong><br><span style="font-size:.8rem;color:var(--text-light)">Toutes les données analytics seront supprimées. Irréversible.</span>';
+  document.getElementById('confirmYes').onclick=async()=>{
+    closeConfirm();showToast('Suppression en cours…','info');
+    try{
+      let total=0;
+      while(true){
+        const snap=await db.collection('analytics').limit(500).get();
+        if(snap.empty)break;
+        const batch=db.batch();snap.docs.forEach(d=>batch.delete(d.ref));
+        await batch.commit();total+=snap.size;
+      }
+      showToast(total+' événements supprimés','success');renderStats();
+    }catch(e){showToast('Erreur: '+e.message,'error')}
+  };
+  document.getElementById('confirmBg').classList.add('open');
+}
+
+function destroyCharts(){Object.values(charts).forEach(c=>{if(c&&c.destroy)c.destroy()});charts={}}
+
+async function renderStats(){
+  const cont=document.getElementById('statsContent');
+  cont.innerHTML='<p style="text-align:center;padding:60px;color:var(--text-lighter)">⏳ Chargement des analytics…</p>';
+  destroyCharts();
+  try{
+    let query=db.collection('analytics').orderBy('timestamp','desc');
+    const fv=document.getElementById('statsDateFrom').value,tv=document.getElementById('statsDateTo').value;
+    if(fv)query=query.where('timestamp','>=',new Date(fv));
+    if(tv){const d=new Date(tv);d.setDate(d.getDate()+1);query=query.where('timestamp','<',d)}
+    const snap=await query.limit(10000).get();
+    const ev=snap.docs.map(d=>({id:d.id,...d.data()}));
+    const visits=ev.filter(e=>e.type==='visit'||e.type==='page_load');
+    const views=ev.filter(e=>e.type==='view_dmc');
+    const searches=ev.filter(e=>e.type==='search');
+    const clicks=ev.filter(e=>e.type==='click_url');
+    const sessions=ev.filter(e=>e.type==='session_end');
+    const filters=ev.filter(e=>e.type==='filter');
+    const uniqueS=new Set(ev.map(e=>e.session_id).filter(Boolean));
+    const dur=sessions.map(e=>e.duration_seconds).filter(d=>d>0&&d<3600);
+    const avgD=dur.length?Math.round(dur.reduce((a,b)=>a+b,0)/dur.length):0;
+    const avgM=Math.floor(avgD/60),avgS=avgD%60;
+    // By day
+    const byDay={};visits.forEach(e=>{if(!e.timestamp)return;const d=e.timestamp.toDate?e.timestamp.toDate().toISOString().slice(0,10):'';if(d)byDay[d]=(byDay[d]||0)+1});
+    const days=Object.entries(byDay).sort((a,b)=>a[0].localeCompare(b[0]));
+    // Top DMC
+    const dmcC={};views.forEach(e=>{const k=e.dmc_title||'?';dmcC[k]=(dmcC[k]||0)+1});
+    const topDMC=Object.entries(dmcC).sort((a,b)=>b[1]-a[1]).slice(0,10);
+    // Clicks
+    const urlC={};clicks.forEach(e=>{const k=e.dmc_title||e.target_url||'?';urlC[k]=(urlC[k]||0)+1});
+    const topClk=Object.entries(urlC).sort((a,b)=>b[1]-a[1]).slice(0,10);
+    // Searches
+    const recentS=searches.slice(0,25);
+    // Filters
+    const fC={};filters.forEach(e=>{if(e.continent)fC[e.continent]=(fC[e.continent]||0)+1;if(e.country)fC[e.country]=(fC[e.country]||0)+1});
+    const topF=Object.entries(fC).sort((a,b)=>b[1]-a[1]).slice(0,10);
+    // Devices
+    const dev={desktop:0,mobile:0,tablet:0};
+    ev.forEach(e=>{if(!e.screen)return;const w=parseInt(e.screen);if(w<768)dev.mobile++;else if(w<1024)dev.tablet++;else dev.desktop++});
+
+    cont.innerHTML=`
+      <div class="kpi-grid">
+        <div class="kpi cy"><div class="kpi-icon">👁</div><div class="kpi-value">${visits.length}</div><div class="kpi-label">Visites</div></div>
+        <div class="kpi pu"><div class="kpi-icon">👤</div><div class="kpi-value">${uniqueS.size}</div><div class="kpi-label">Sessions uniques</div></div>
+        <div class="kpi gr"><div class="kpi-icon">📋</div><div class="kpi-value">${views.length}</div><div class="kpi-label">Fiches consultées</div></div>
+        <div class="kpi or"><div class="kpi-icon">🔗</div><div class="kpi-value">${clicks.length}</div><div class="kpi-label">Clics TourMaG</div></div>
+        <div class="kpi cy"><div class="kpi-icon">🔍</div><div class="kpi-value">${searches.length}</div><div class="kpi-label">Recherches</div></div>
+        <div class="kpi pu"><div class="kpi-icon">⏱️</div><div class="kpi-value">${avgM}m${String(avgS).padStart(2,'0')}</div><div class="kpi-label">Durée moy.</div></div>
+      </div>
+
+      <div class="chart-card"><h3>📈 Visites par jour</h3><div class="chart-wrap"><canvas id="chartVisits"></canvas></div></div>
+
+      <div class="two-col">
+        <div class="chart-card"><h3>🏆 Top 10 réceptifs consultés</h3><div class="chart-wrap"><canvas id="chartTopDMC"></canvas></div></div>
+        <div class="chart-card"><h3>🔗 Top 10 clics vers TourMaG</h3><div class="chart-wrap"><canvas id="chartClicks"></canvas></div></div>
+      </div>
+
+      <div class="two-col">
+        <div class="chart-card"><h3>📱 Appareils</h3><div class="chart-wrap sm"><canvas id="chartDevices"></canvas></div></div>
+        <div class="chart-card"><h3>🏷️ Filtres populaires</h3><div class="chart-wrap"><canvas id="chartFilters"></canvas></div></div>
+      </div>
+
+      <div class="chart-card"><h3>🔍 Dernières recherches</h3>
+        ${recentS.length?`<table class="stats-table"><tr><th>Recherche</th><th>Résultats</th><th>Date</th></tr>${recentS.map(e=>{const dt=e.timestamp?.toDate?e.timestamp.toDate().toLocaleDateString('fr-FR',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'-';return`<tr><td style="font-weight:600">${e.query||''}</td><td>${e.results_count??'-'}</td><td style="color:var(--text-lighter)">${dt}</td></tr>`}).join('')}</table>`:'<p style="color:var(--text-lighter);padding:20px;text-align:center">Aucune recherche</p>'}
+      </div>
+
+      <div class="chart-card"><h3>🕐 Dernières modifications (fiches)</h3>
+        <table class="stats-table"><tr><th>DMC</th><th>Par</th><th>Date</th></tr>${[...allDMC].filter(d=>d.updated_at).sort((a,b)=>(b.updated_at?.seconds||0)-(a.updated_at?.seconds||0)).slice(0,10).map(d=>{const dt=d.updated_at?.toDate?d.updated_at.toDate().toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}):'-';return`<tr><td style="font-weight:600">${d.title||''}</td><td style="color:var(--text-lighter)">${d.updated_by||'-'}</td><td style="color:var(--text-lighter)">${dt}</td></tr>`}).join('')}</table>
+      </div>
+
+      <p style="text-align:center;font-size:.72rem;color:var(--text-lighter);margin-top:12px">${ev.length} événements • max 10 000</p>
+    `;
+
+    // Build charts
+    const cDefault={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{font:{size:10}}},y:{beginAtZero:true,grid:{color:'rgba(0,0,0,.04)'},ticks:{font:{size:10}}}}};
+
+    // Visits line chart
+    if(days.length){
+      charts.visits=new Chart(document.getElementById('chartVisits'),{type:'line',data:{labels:days.map(([d])=>d.slice(5)),datasets:[{data:days.map(([,n])=>n),borderColor:'#0EA5E9',backgroundColor:'rgba(14,165,233,.1)',fill:true,tension:.4,pointRadius:3,pointBackgroundColor:'#0EA5E9',borderWidth:2}]},options:{...cDefault}});
+    }
+
+    // Top DMC bar
+    if(topDMC.length){
+      charts.topDMC=new Chart(document.getElementById('chartTopDMC'),{type:'bar',data:{labels:topDMC.map(([l])=>l.length>22?l.slice(0,22)+'…':l),datasets:[{data:topDMC.map(([,n])=>n),backgroundColor:'rgba(34,197,94,.7)',borderRadius:6,borderSkipped:false}]},options:{...cDefault,indexAxis:'y',scales:{...cDefault.scales,x:{...cDefault.scales.x,grid:{display:false}},y:{...cDefault.scales.y,grid:{display:false},ticks:{font:{size:10}}}}}});
+    }
+
+    // Clicks bar
+    if(topClk.length){
+      charts.clicks=new Chart(document.getElementById('chartClicks'),{type:'bar',data:{labels:topClk.map(([l])=>l.length>22?l.slice(0,22)+'…':l),datasets:[{data:topClk.map(([,n])=>n),backgroundColor:'rgba(245,158,11,.7)',borderRadius:6,borderSkipped:false}]},options:{...cDefault,indexAxis:'y',scales:{...cDefault.scales,x:{...cDefault.scales.x,grid:{display:false}},y:{...cDefault.scales.y,grid:{display:false},ticks:{font:{size:10}}}}}});
+    }
+
+    // Devices doughnut
+    charts.devices=new Chart(document.getElementById('chartDevices'),{type:'doughnut',data:{labels:['Desktop','Mobile','Tablette'],datasets:[{data:[dev.desktop,dev.mobile,dev.tablet],backgroundColor:['#0EA5E9','#F59E0B','#22C55E'],borderWidth:0,spacing:3}]},options:{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{position:'bottom',labels:{font:{size:12,family:'Plus Jakarta Sans'},padding:16,usePointStyle:true,pointStyle:'circle'}}}}});
+
+    // Filters bar
+    if(topF.length){
+      charts.filters=new Chart(document.getElementById('chartFilters'),{type:'bar',data:{labels:topF.map(([l])=>l),datasets:[{data:topF.map(([,n])=>n),backgroundColor:'rgba(139,92,246,.7)',borderRadius:6,borderSkipped:false}]},options:{...cDefault,indexAxis:'y',scales:{...cDefault.scales,x:{...cDefault.scales.x,grid:{display:false}},y:{...cDefault.scales.y,grid:{display:false},ticks:{font:{size:10}}}}}});
+    }
+  }catch(e){console.error(e);cont.innerHTML='<p style="text-align:center;padding:40px;color:var(--red)">Erreur: '+e.message+'</p>'}
+}
+
+// === PREVIEW ===
+function previewDMC(id){
+  switchTab('fiches');
+  const d=allDMC.find(x=>x.id===id);if(!d)return;
+  try{
+  const destBlock=(title,list)=>(list&&list.length)?`<div style="margin:10px 0;padding:10px 12px;background:rgba(44,181,200,0.06);border:1px solid rgba(44,181,200,0.15);border-radius:8px"><div style="font-size:.7rem;font-weight:700;color:#2CB5C8;text-transform:uppercase;letter-spacing:.3px;margin-bottom:6px">${title}</div><div style="display:flex;flex-wrap:wrap;gap:5px">${list.map(dd=>`<span style="font-size:.72rem;padding:3px 10px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;font-weight:500">${dd}</span>`).join('')}</div></div>`:'';
+  const primaryDests=(d.primary_destinations||[]);
+  const allDests=(d.destinations||[]);
+  const primarySet=new Set(primaryDests.map(p=>p.toLowerCase().trim()));
+  const allDestsSet=new Set(allDests.map(p=>p.toLowerCase().trim()));
+  const otherDests=allDests.filter(dd=>!primarySet.has(dd.toLowerCase().trim()));
+  const sameDestinations=allDests.length>0&&primaryDests.length>0&&primaryDests.every(p=>allDestsSet.has(p.toLowerCase().trim()))&&otherDests.length===0;
+  const badges=sameDestinations?'':primaryDests.map(p=>`<span style="display:inline-block;background:#2CB5C8;color:#fff;font-size:.75rem;font-weight:700;padding:3px 12px;border-radius:20px;margin-right:4px;margin-bottom:4px">${p}</span>`).join('');
+  let destHtml='';
+  if(sameDestinations){destHtml=destBlock('Autres destinations proposées par ce réceptif',allDests)}
+  else if(otherDests.length>0){destHtml=destBlock('Autres destinations proposées par ce réceptif',otherDests)}
+  const tags=d.tags||{};
+  const tagSection=(cat,title,css)=>{
+    const tl=tags[cat]||[];if(!tl.length)return'';
+    return`<div class="preview-section"><div class="preview-section-title ${css}">${title}</div><div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start">${tl.map(t=>`<div style="display:flex;flex-direction:column;align-items:center;width:70px;text-align:center"><img src="${PICTO}${t.id}.png" style="width:40px;height:40px;margin-bottom:4px" onerror="this.style.display='none'"><span style="font-size:.68rem;color:var(--text-light);line-height:1.2">${t.label}</span></div>`).join('')}</div></div>`;
+  };
+  document.getElementById('previewCard').innerHTML=`
+    <div style="position:relative">
+      ${d.image?`<img class="preview-img" src="${d.image}" onerror="this.style.height='100px';this.style.background='var(--dark)'">`:'<div style="height:100px;background:linear-gradient(135deg,var(--dark),#1E3A4F)"></div>'}
+      <button onclick="closePreview()" style="position:absolute;top:12px;right:12px;width:32px;height:32px;border-radius:50%;background:rgba(0,0,0,.5);border:none;color:#fff;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
+    </div>
+    <div class="preview-body">
+      <div class="preview-title">${d.title||'(sans titre)'}</div>
+      ${badges?`<div style="margin:8px 0">${badges}</div>`:''}
+      ${destHtml}
+      ${d.description?`<div class="preview-desc">${d.description}</div>`:''}
+      ${d.date_creation?`<div style="font-size:.78rem;color:var(--text-lighter);margin-bottom:8px">📅 Créé en ${d.date_creation}</div>`:''}
+      ${d.url?`<a href="${d.url}" target="_blank" style="display:block;text-align:center;background:${d.sponsored?'linear-gradient(135deg,#F59E0B,#EF4444)':'var(--orange)'};color:#fff;padding:12px;border-radius:10px;font-size:.9rem;font-weight:700;text-decoration:none;margin-bottom:12px">Contactez ce réceptif →</a>`:''}
+      ${tagSection('clientele','CLIENTÈLE','c1')}
+      ${tagSection('prestations','PRESTATIONS','c2')}
+      ${tagSection('activites','ACTIVITÉS / THÉMATIQUES','c3')}
+    </div>`;
+  document.getElementById('previewBg').classList.add('open');
+  }catch(err){console.error('Preview error:',err,d);showToast('Erreur aperçu: '+err.message,'error')}
+}
+function closePreview(){document.getElementById('previewBg').classList.remove('open')}
+
+// === USER MANAGEMENT ===
+async function loadUsers(){
+  try{const snap=await db.collection('users').get();allUsers=snap.docs.map(d=>({id:d.id,...d.data()}));renderUsersTable()}catch(e){console.error(e)}
+}
+function renderUsersTable(){
+  const tb=document.getElementById('usersTableBody');
+  if(!allUsers.length){tb.innerHTML='<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text-lighter)">Aucun utilisateur configuré</td></tr>';return}
+  tb.innerHTML=allUsers.map(u=>{
+    const roleLabel=u.role==='admin'?'<span class="td-status published">Admin</span>':u.role==='dmc'?'<span class="td-status" style="background:var(--cyan-bg);color:var(--cyan-dark)">DMC</span>':'<span class="td-status draft">Lecteur</span>';
+    const urls=(u.dmcUrls||[]).length?u.dmcUrls.length+' fiche(s)':'—';
+    const fields=(u.editableFields||[]).length===ALL_FIELDS.length?'Tous':((u.editableFields||[]).length?u.editableFields.length+' champ(s)':'Aucun');
+    return`<tr>
+      <td style="font-size:.78rem;color:var(--text-light)">${u.email||u.id}</td>
+      <td class="td-title">${u.label||'—'}</td>
+      <td>${roleLabel}</td>
+      <td style="font-size:.78rem">${urls}</td>
+      <td style="font-size:.78rem">${fields}</td>
+      <td><div class="td-actions"><button class="btn-act btn-act-edit" onclick="openUserEdit('${u.id}')">✏️ Modifier</button><button class="btn-act btn-act-delete" onclick="deleteUser('${u.id}','${(u.label||u.email||'').replace(/'/g,"\\'")}')" style="border-color:rgba(239,68,68,.2);color:var(--red)">🗑️ Supprimer</button></div></td>
+    </tr>`;
+  }).join('');
+}
+function openUserNew(){editingUserId=null;document.getElementById('userModalTitle').textContent='Ajouter un utilisateur';renderUserForm({});document.getElementById('userModalBg').classList.add('open')}
+function openUserEdit(uid){const u=allUsers.find(x=>x.id===uid);if(!u)return;editingUserId=uid;document.getElementById('userModalTitle').textContent='Modifier : '+(u.label||u.email||uid);renderUserForm(u);document.getElementById('userModalBg').classList.add('open')}
+function closeUserModal(){document.getElementById('userModalBg').classList.remove('open');editingUserId=null}
+function renderUserForm(u){
+  const body=document.getElementById('userModalBody');
+  const ef=new Set(u.editableFields||[]);
+  const dmcOpts=allDMC.map(d=>`<option value="${d.url}" ${(u.dmcUrls||[]).includes(d.url)?'selected':''}>${d.title||d.url}</option>`).join('');
+  body.innerHTML=`
+    <div class="form-row"><div class="form-field"><label>UID Firebase</label><input type="text" id="uUid" value="${editingUserId||''}" ${editingUserId?'readonly':''}><div class="form-hint">Copié depuis Firebase Console → Authentication</div></div></div>
+    <div class="form-row"><div class="form-field"><label>Email</label><input type="text" id="uEmail" value="${u.email||''}"></div><div class="form-field"><label>Nom affiché</label><input type="text" id="uLabel" value="${u.label||''}"></div></div>
+    <div class="form-row"><div class="form-field"><label>Rôle</label><select id="uRole" onchange="toggleUserFields()"><option value="dmc" ${u.role==='dmc'||!u.role?'selected':''}>DMC (modifie ses fiches)</option><option value="lecteur" ${u.role==='lecteur'?'selected':''}>Lecteur (lecture seule)</option><option value="admin" ${u.role==='admin'?'selected':''}>Admin (tout)</option></select></div></div>
+    <div id="uDmcFields">
+      <div class="form-row"><div class="form-field"><label>Fiches associées</label><select id="uDmcUrls" multiple style="height:140px">${dmcOpts}</select><div class="form-hint">Ctrl+clic pour sélectionner plusieurs fiches</div></div></div>
+      <div class="form-tag-section"><div class="form-tag-section-title" style="color:var(--purple)">Champs modifiables par cet utilisateur</div>
+        <div class="form-hint" style="margin-bottom:10px">Cochez les champs que cet utilisateur pourra modifier sur ses fiches</div>
+        <div id="uFieldChips" style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
+          ${ALL_FIELDS.map(f=>`<label class="field-perm-item" style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1.5px solid ${ef.has(f.id)?'var(--purple)':'var(--border)'};border-radius:8px;cursor:pointer;font-size:.78rem;font-weight:500;transition:all .15s;background:${ef.has(f.id)?'rgba(139,92,246,.06)':'#fff'}"><input type="checkbox" data-fid="${f.id}" ${ef.has(f.id)?'checked':''} onchange="updateFieldPermStyle(this)" style="accent-color:var(--purple);width:16px;height:16px;flex-shrink:0"><span>${f.l}</span></label>`).join('')}
+        </div>
+        <div style="margin-top:10px;display:flex;gap:8px"><button class="btn btn-ghost" style="font-size:.75rem;padding:6px 14px" onclick="document.querySelectorAll('#uFieldChips input[type=checkbox]').forEach(c=>{c.checked=true;updateFieldPermStyle(c)})">✅ Tout cocher</button> <button class="btn btn-ghost" style="font-size:.75rem;padding:6px 14px" onclick="document.querySelectorAll('#uFieldChips input[type=checkbox]').forEach(c=>{c.checked=false;updateFieldPermStyle(c)})">Tout décocher</button></div>
+      </div>
+    </div>`;
+  toggleUserFields();
+}
+function toggleUserFields(){const r=document.getElementById('uRole').value;document.getElementById('uDmcFields').style.display=r==='dmc'?'':'none'}
+function updateFieldPermStyle(cb){const label=cb.closest('label');if(cb.checked){label.style.borderColor='var(--purple)';label.style.background='rgba(139,92,246,.06)'}else{label.style.borderColor='var(--border)';label.style.background='#fff'}}
+async function saveUser(){
+  const uid=document.getElementById('uUid').value.trim();
+  if(!uid){showToast('UID obligatoire','error');return}
+  const data={
+    email:document.getElementById('uEmail').value.trim(),
+    label:document.getElementById('uLabel').value.trim(),
+    role:document.getElementById('uRole').value,
+    updated_at:firebase.firestore.FieldValue.serverTimestamp()
+  };
+  if(data.role==='dmc'){
+    const sel=document.getElementById('uDmcUrls');
+    data.dmcUrls=[...sel.selectedOptions].map(o=>o.value);
+    data.editableFields=[];
+    document.querySelectorAll('#uFieldChips input[type=checkbox]:checked').forEach(c=>data.editableFields.push(c.dataset.fid));
+  } else if(data.role==='admin'){
+    data.dmcUrls=[];data.editableFields=ALL_FIELDS.map(f=>f.id);
+  } else {
+    data.dmcUrls=[];data.editableFields=[];
+  }
+  try{
+    if(!editingUserId)data.created_at=firebase.firestore.FieldValue.serverTimestamp();
+    await db.collection('users').doc(uid).set(data,{merge:true});
+    showToast('Utilisateur enregistré','success');closeUserModal();loadUsers();
+  }catch(e){showToast('Erreur: '+e.message,'error')}
+}
+async function deleteUser(uid,label){
+  if(!confirm('Supprimer l\'utilisateur '+label+' ?'))return;
+  try{await db.collection('users').doc(uid).delete();showToast('Supprimé','success');loadUsers()}catch(e){showToast('Erreur: '+e.message,'error')}
+}
+
+function showToast(msg,type='success'){const t=document.getElementById('toast');t.textContent=msg;t.className='toast show '+type;setTimeout(()=>t.className='toast',3500)}
+window.addEventListener('scroll',()=>{const btn=document.getElementById('btnTop');if(window.scrollY>400)btn.classList.add('visible');else btn.classList.remove('visible')});
+function toggleActMenu(id){const el=document.getElementById('actMore_'+id);document.querySelectorAll('.act-more.open').forEach(m=>{if(m!==el)m.classList.remove('open')});el.classList.toggle('open')}
+document.addEventListener('click',()=>{document.querySelectorAll('.act-more.open').forEach(m=>m.classList.remove('open'))});
+</script>
+</body>
+</html>

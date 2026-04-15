@@ -1,0 +1,1380 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Carte des DMC - DestiMaG</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.Default.css"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --cyan: #2CB5C8;
+  --green: #5BBD6B;
+  --orange: #E8913A;
+  --dark: #1A2332;
+  --primary: #2CB5C8;
+  --primary-light: #35C9DD;
+  --primary-dark: #1E8A9A;
+  --bg: #F8FAFB;
+  --bg-card: #FFFFFF;
+  --border: #E2E8F0;
+  --border-light: #F1F5F9;
+  --text: #1E293B;
+  --text-light: #64748B;
+  --text-lighter: #94A3B8;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.1);
+  --shadow-lg: 0 8px 30px rgba(0,0,0,0.12);
+  --radius: 8px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'DM Sans',sans-serif;color:var(--text);overflow:hidden;height:100vh}
+
+/* ===== EMBED ===== */
+.embed-container{position:relative;width:100%;aspect-ratio:1/1;cursor:pointer;overflow:hidden;border-radius:var(--radius);background:var(--dark)}
+.embed-map{width:100%;height:100%;z-index:1}
+.embed-overlay{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,rgba(26,35,50,0.85),rgba(44,181,200,0.3));transition:opacity 0.3s}
+.embed-overlay h2{color:#fff;font-size:1.3rem;font-weight:700;margin-bottom:6px}
+.embed-overlay p{color:rgba(255,255,255,0.8);font-size:0.85rem}
+.embed-overlay .embed-btn{margin-top:16px;background:var(--cyan);color:#fff;border:none;padding:10px 28px;border-radius:6px;font-size:0.9rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.2s}
+.embed-overlay .embed-btn:hover{background:var(--primary-light);transform:translateY(-1px)}
+.embed-container:hover .embed-overlay{opacity:0.95}
+.embed-container.size-small{width:300px;height:245px;border-radius:0}
+.embed-container.size-small .embed-overlay{padding:20px;text-align:center}
+.embed-container.size-small .embed-overlay h2{font-size:1rem}
+.embed-container.size-small .embed-overlay p{font-size:0.75rem}
+.embed-container.size-small .embed-overlay .embed-btn{padding:8px 20px;font-size:0.8rem;margin-top:10px}
+
+/* ===== MODAL ===== */
+.modal-backdrop{position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.6);display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.modal-backdrop.open{display:flex}
+.modal-content{background:var(--bg-card);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;width:96vw;height:94vh;max-width:1600px;box-shadow:var(--shadow-lg)}
+
+/* ===== TOPBAR ===== */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;background:var(--dark);color:#fff;flex-shrink:0}
+.topbar-left{display:flex;align-items:center;gap:10px;font-size:1rem;font-weight:700;letter-spacing:-0.3px}
+.topbar-count{background:var(--cyan);font-size:0.7rem;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:4px}
+.btn-close{background:rgba(255,255,255,0.15);border:none;color:#fff;width:32px;height:32px;border-radius:6px;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.2s}
+.btn-close:hover{background:rgba(255,255,255,0.25)}
+
+/* ===== LAYOUT ===== */
+.main-layout{display:flex;flex:1;overflow:hidden}
+
+/* ===== SIDEBAR ===== */
+.sidebar{width:380px;display:flex;flex-direction:column;border-right:1px solid var(--border);background:var(--bg-card);flex-shrink:0;overflow:hidden}
+.search-box{padding:12px 14px;border-bottom:1px solid var(--border)}
+.search-wrap{position:relative;display:flex;align-items:center}
+.search-wrap svg{position:absolute;left:10px;color:var(--text-lighter)}
+.search-wrap input{width:100%;padding:9px 12px 9px 34px;border:1px solid var(--border);border-radius:6px;font-size:0.85rem;font-family:inherit;background:var(--bg);transition:border 0.2s;outline:none}
+.search-wrap input:focus{border-color:var(--cyan)}
+
+/* Filtres */
+.filters-section{border-bottom:1px solid var(--border)}
+.filters-toggle{width:100%;display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--cyan);border:none;font-family:inherit;font-size:0.82rem;font-weight:700;color:#fff;cursor:pointer;transition:background .15s}
+.filters-toggle:hover{background:#2193a3}
+.filters-toggle svg{stroke:#fff}
+.active-filters-count{background:#fff;color:var(--cyan);padding:1px 7px;border-radius:10px;font-size:.72rem;margin-left:6px}
+.filters-toggle svg{transition:transform 0.2s}
+.filters-toggle.open svg{transform:rotate(180deg)}
+.filters-body{display:none;padding:0;max-height:none;overflow:hidden}
+.filters-body.open{display:none}
+/* Filters popup - all devices */
+.filters-popup-backdrop{display:none;position:fixed;inset:0;z-index:10002;background:rgba(15,23,42,.5);backdrop-filter:blur(4px);align-items:center;justify-content:center}
+.filters-popup-backdrop.open{display:flex}
+.filters-popup{background:var(--bg-card);border-radius:12px;width:90vw;max-width:600px;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.filters-popup-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-shrink:0}
+.filters-popup-header span{font-size:1rem;font-weight:700;color:var(--text)}
+.filters-popup-header button{width:34px;height:34px;border-radius:50%;border:1px solid var(--border);background:var(--bg-card);font-size:1.1rem;color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.filters-popup-scroll{flex:1;overflow-y:auto;padding:14px 20px 20px;-webkit-overflow-scrolling:touch;touch-action:pan-y;overscroll-behavior:contain}
+.filters-popup-footer{flex-shrink:0;padding:14px 20px;border-top:1px solid var(--border);background:var(--bg-card)}
+.filters-popup-footer button{width:100%;background:var(--cyan);color:#fff;border:none;padding:13px;border-radius:10px;font-size:.88rem;font-weight:700;font-family:inherit;cursor:pointer;transition:background .15s}
+.filters-popup-footer button:hover{background:#2193a3}
+
+.filter-row{margin-bottom:10px}
+.filter-label{display:block;font-size:0.72rem;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;color:var(--text-light);margin-bottom:5px}
+.filter-select{width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:5px;font-size:0.82rem;font-family:inherit;background:#fff;outline:none;cursor:pointer}
+.filter-select:focus{border-color:var(--cyan)}
+
+.filter-category-label{font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.4px;color:var(--primary-dark);margin:12px 0 6px;padding-top:8px;border-top:1px solid var(--border-light)}
+.filter-category-label:first-of-type{border-top:none;margin-top:6px}
+
+/* Groupes de filtres repliables */
+.filter-group{margin-bottom:6px}
+.filter-group-header{display:flex;align-items:center;gap:6px;padding:5px 8px;background:var(--bg);border-radius:5px;cursor:pointer;font-size:0.75rem;font-weight:600;color:var(--text);transition:background 0.15s;user-select:none}
+.filter-group-header:hover{background:var(--border-light)}
+.filter-group-header svg{width:12px;height:12px;transition:transform 0.2s;flex-shrink:0;color:var(--text-lighter)}
+.filter-group-header.open svg{transform:rotate(90deg)}
+.filter-group-header .group-count{font-size:0.65rem;color:var(--text-lighter);font-weight:400;margin-left:auto}
+.filter-group-body{display:none;padding:6px 0 2px 8px}
+.filter-group-body.open{display:block}
+
+.filter-chips{display:flex;flex-wrap:wrap;gap:5px}
+.filter-chip{padding:4px 10px;border:1px solid var(--border);border-radius:14px;font-size:0.73rem;font-weight:500;color:var(--text-light);cursor:pointer;transition:all 0.15s;user-select:none}
+.filter-chip:hover{border-color:var(--cyan);color:var(--cyan)}
+.filter-chip.active{background:var(--cyan);color:#fff;border-color:var(--cyan)}
+
+.active-filters-count{display:inline-flex;align-items:center;justify-content:center;background:var(--orange);color:#fff;font-size:0.65rem;font-weight:700;width:18px;height:18px;border-radius:50%;margin-left:4px}
+
+.filters-actions{padding-top:8px;border-top:1px solid var(--border-light)}
+.btn-reset{width:100%;padding:7px;background:none;border:1px solid var(--border);border-radius:5px;font-size:0.78rem;font-family:inherit;color:var(--text-light);cursor:pointer;transition:all 0.15s}
+.btn-reset:hover{border-color:#EF4444;color:#EF4444;background:rgba(239,68,68,0.04)}
+
+/* Liste DMC */
+.dmc-list-header{padding:10px 14px;font-size:0.78rem;font-weight:600;color:var(--text-light);background:var(--bg);border-bottom:1px solid var(--border);flex-shrink:0}
+.dmc-list{flex:1;overflow-y:auto;padding:6px}
+.dmc-card{display:flex;gap:10px;padding:10px;border-radius:var(--radius);cursor:pointer;transition:all 0.15s;border:1px solid transparent;margin-bottom:4px}
+.dmc-card:hover{background:var(--bg);border-color:var(--border)}
+.dmc-card.active{background:rgba(44,181,200,0.06);border-color:var(--cyan)}
+.dmc-card-img{width:70px;height:52px;border-radius:5px;object-fit:cover;flex-shrink:0;background:var(--border)}
+.dmc-card-info{flex:1;min-width:0}
+.dmc-card-name{font-size:0.82rem;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dmc-card-dest{font-size:0.72rem;color:var(--text-light);margin-top:1px;line-height:1.3}
+.dmc-card-tags{display:flex;flex-wrap:wrap;gap:3px;margin-top:4px}
+.dmc-card-tag{font-size:0.62rem;padding:1px 6px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text-light);white-space:nowrap}
+.dmc-card.sponsored{background:linear-gradient(135deg,rgba(245,158,11,0.06),rgba(239,68,68,0.04));border:2px solid var(--orange);position:relative}
+.dmc-card.sponsored::before{display:none}
+.dmc-card.sponsored .dmc-card-name{color:#B45309}
+
+/* ===== MAP ===== */
+.map-panel{flex:1;position:relative;min-width:0}
+.map-reset-btn{position:absolute;top:80px;left:10px;z-index:1000;width:34px;height:34px;background:#fff;border:2px solid rgba(0,0,0,.2);border-radius:4px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;color:#333;transition:background .15s}
+.map-reset-btn:hover{background:#f4f4f4}
+#mainMap{width:100%;height:100%;z-index:1}
+
+/* ===== DETAIL PANEL ===== */
+.detail-panel{position:absolute;top:0;right:0;width:400px;height:100%;background:var(--bg-card);z-index:1000;transform:translateX(100%);transition:transform 0.25s ease;box-shadow:-4px 0 20px rgba(0,0,0,0.1);display:flex;flex-direction:column;overflow:hidden;touch-action:pan-y}
+.detail-panel.open{transform:translateX(0)}
+.detail-header{position:relative;flex-shrink:0}
+.detail-header img{width:100%;height:220px;object-fit:cover;object-position:top center;display:block}
+.detail-header .detail-close{position:absolute;top:10px;right:10px;background:rgba(0,0,0,0.5);color:#fff;border:none;width:30px;height:30px;border-radius:50%;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.detail-body{flex:1;overflow-y:auto;padding:16px;-webkit-overflow-scrolling:touch;touch-action:pan-y;overscroll-behavior:contain}
+.detail-title{font-size:1.05rem;font-weight:700;color:var(--text);margin-bottom:4px}
+.detail-destinations{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px}
+.detail-dest-badge{padding:3px 10px;background:var(--cyan);color:#fff;border-radius:12px;font-size:0.72rem;font-weight:600}
+.detail-desc{font-size:0.82rem;color:var(--text-light);line-height:1.5;margin-bottom:14px}
+.detail-other-dests{font-size:0.75rem;color:var(--text-lighter);margin-bottom:10px;font-style:italic}
+.detail-proposed-dests{margin:10px 0;padding:10px 12px;background:rgba(44,181,200,0.06);border:1px solid rgba(44,181,200,0.15);border-radius:8px}
+.detail-proposed-title{font-size:0.7rem;font-weight:700;color:var(--cyan);text-transform:uppercase;letter-spacing:0.3px;margin-bottom:6px}
+.detail-proposed-list{display:flex;flex-wrap:wrap;gap:5px}
+.detail-proposed-tag{font-size:0.72rem;padding:3px 10px;background:#fff;border:1px solid var(--border);border-radius:12px;color:var(--text);font-weight:500}
+.dmc-group{margin-bottom:4px}
+.dmc-group-header{display:flex;gap:10px;padding:10px;border-radius:var(--radius);cursor:pointer;transition:all 0.15s;border:1px solid transparent;align-items:center}
+.dmc-group-header:hover{background:var(--bg);border-color:var(--border)}
+.dmc-group-header.active{background:rgba(44,181,200,0.06);border-color:var(--cyan)}
+.dmc-group-header.sponsored{background:linear-gradient(135deg,rgba(245,158,11,0.06),rgba(239,68,68,0.04));border:2px solid var(--orange)}
+.dmc-group-header.sponsored .dmc-group-name{color:#B45309}
+.dmc-group-header.sponsored::after{display:none}
+.dmc-group-header{position:relative}
+.dmc-group-img{width:70px;height:52px;border-radius:5px;object-fit:cover;flex-shrink:0;background:var(--border)}
+.dmc-group-info{flex:1;min-width:0}
+.dmc-group-name{font-size:0.82rem;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dmc-group-meta{font-size:0.7rem;color:var(--text-light);margin-top:2px;line-height:1.3}
+.dmc-group-count{font-size:0.62rem;padding:1px 7px;background:var(--cyan);color:#fff;border-radius:8px;font-weight:700;flex-shrink:0}
+.dmc-group-fiches{padding-left:16px;border-left:2px solid var(--border);margin-left:44px;margin-bottom:8px;display:none}
+.dmc-group-fiches.open{display:block}
+.dmc-group-fiche{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:0.78rem;color:var(--text);transition:background 0.1s}
+.dmc-group-fiche:hover{background:var(--bg)}
+.dmc-group-fiche .fiche-dest{font-weight:600}.dmc-group-fiche .fiche-title{color:var(--text-lighter);font-size:0.7rem}
+.detail-date{font-size:0.75rem;color:var(--text-lighter);margin-bottom:14px}
+
+.detail-section-title{font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.4px;margin:14px 0 8px;padding-top:10px;border-top:1px solid var(--border-light)}
+.detail-section-title.clientele{color:var(--primary-dark)}
+.detail-section-title.prestations{color:#2D7A3A}
+.detail-section-title.activites{color:#B06520}
+
+/* Picto grid dans le detail */
+.detail-pictos{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px}
+.detail-picto{display:flex;flex-direction:column;align-items:center;width:64px;text-align:center}
+.detail-picto img{width:42px;height:42px;margin-bottom:3px}
+.detail-picto span{font-size:0.6rem;color:var(--text-light);line-height:1.2;word-break:break-word}
+
+.detail-link{display:inline-block;margin-top:8px;padding:12px 22px;background:var(--orange);color:#fff;text-decoration:none;border-radius:6px;font-size:0.85rem;font-weight:600;transition:all 0.2s;width:100%;text-align:center}
+.detail-link:hover{background:#D07A2A;transform:translateY(-1px)}
+.detail-news{margin:16px 0;padding:0;border:1px solid rgba(232,121,36,.15);border-radius:10px;overflow:hidden}
+.dmcnews-brand{font-size:.8rem;font-weight:800;letter-spacing:.5px;color:var(--orange);padding:10px 14px;background:linear-gradient(135deg,rgba(232,121,36,.06),rgba(232,121,36,.02));border-bottom:1px solid rgba(232,121,36,.12)}
+.dmcnews-tabs{display:flex;border-bottom:1px solid rgba(232,121,36,.12)}
+.dmcnews-tab{flex:1;padding:9px 10px;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.3px;text-align:center;cursor:pointer;border:none;background:none;font-family:inherit;color:var(--text-light);position:relative;transition:color .15s;white-space:nowrap}
+.dmcnews-tab.active{color:var(--orange)}
+.dmcnews-tab.active::after{content:'';position:absolute;bottom:0;left:14px;right:14px;height:2.5px;background:var(--orange);border-radius:2px 2px 0 0}
+.dmcnews-tab:hover:not(.active){color:var(--text)}
+.dmcnews-content{padding:12px 14px}
+.news-card{display:flex;gap:12px;padding:10px;background:#fff;border:1.5px solid var(--border);border-radius:8px;text-decoration:none;color:var(--text);transition:all .2s}
+.news-card:hover{border-color:var(--orange);box-shadow:0 4px 12px rgba(232,121,36,.1);transform:translateY(-1px)}
+.news-card .news-img{width:90px;height:65px;object-fit:cover;border-radius:8px;flex-shrink:0;box-shadow:0 2px 6px rgba(0,0,0,.1)}
+.news-card-body{flex:1;min-width:0}
+.news-card-title{font-size:.82rem;font-weight:700;color:var(--text);line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.news-card-date{font-size:.7rem;color:var(--orange);font-weight:600;margin-top:4px}
+.news-card-read{font-size:.7rem;color:var(--orange);font-weight:700;margin-top:6px;display:inline-block}
+/* News popup */
+.news-popup-bg{display:none;position:fixed;inset:0;z-index:10010;background:rgba(15,23,42,.55);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px}
+.news-popup-bg.open{display:flex}
+.news-popup{background:var(--bg-card);border-radius:12px;width:90vw;max-width:560px;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.2);overflow:hidden}
+.news-popup-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-shrink:0}
+.news-popup-header span{font-size:.95rem;font-weight:700;color:var(--text)}
+.news-popup-close{width:32px;height:32px;border-radius:50%;border:1px solid var(--border);background:var(--bg-card);font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text)}
+.news-popup-scroll{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:10px}
+.news-popup-scroll .news-card{background:linear-gradient(135deg,rgba(232,121,36,.04),rgba(232,121,36,.01))}
+.event-encart{margin:16px 0;border:2px solid var(--cyan);border-radius:10px;overflow:hidden}
+.event-encart-img{width:100%;height:120px;object-fit:cover;display:block}
+.event-encart-body{padding:12px 14px}
+.event-encart-title{font-size:.82rem;font-weight:800;color:var(--text);margin-bottom:6px}
+.event-encart-text{font-size:.75rem;color:var(--text-light);line-height:1.5;margin-bottom:8px}
+.event-encart-stand{display:inline-flex;align-items:center;gap:4px;font-size:.72rem;font-weight:700;color:var(--cyan);background:rgba(14,165,233,.08);padding:4px 10px;border-radius:6px;margin-bottom:10px}
+.event-encart-btn{display:block;width:100%;text-align:center;padding:10px;background:var(--cyan);color:#fff;font-size:.8rem;font-weight:700;border-radius:8px;text-decoration:none;font-family:inherit;border:none;cursor:pointer;transition:background .15s}
+.event-encart-btn:hover{background:#0e9aba}
+.detail-link.sponsored{background:linear-gradient(135deg,#F59E0B,#EF4444)}
+.detail-link.sponsored:hover{background:linear-gradient(135deg,#D97706,#DC2626)}
+.detail-panel.sponsored-active{box-shadow:-4px 0 0 0 #F59E0B,0 4px 20px rgba(245,158,11,0.15)}
+
+/* No results */
+.no-results{padding:40px 20px;text-align:center;color:var(--text-light)}
+.no-results p{font-size:0.85rem;margin-top:8px}
+
+/* ===== LEAFLET OVERRIDES ===== */
+.custom-marker{width:20px;height:20px;background:var(--cyan);border:3px solid #fff;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.35);transition:transform 0.15s}
+.custom-marker:hover{transform:scale(1.4)}
+.custom-marker.highlighted{width:24px;height:24px;background:#F59E0B;border:3px solid #fff;box-shadow:0 0 0 4px rgba(245,158,11,0.3),0 2px 10px rgba(245,158,11,0.5);z-index:900!important;animation:highlightPulse 1.5s ease-in-out infinite}
+@keyframes highlightPulse{0%,100%{box-shadow:0 0 0 4px rgba(245,158,11,0.3),0 2px 10px rgba(245,158,11,0.5)}50%{box-shadow:0 0 0 8px rgba(245,158,11,0.15),0 2px 16px rgba(245,158,11,0.7)}}
+.custom-marker.sponsored{width:28px;height:28px;background:linear-gradient(135deg,#F59E0B,#EF4444);border:3px solid #fff;box-shadow:0 0 0 3px rgba(245,158,11,0.3),0 2px 12px rgba(245,158,11,0.5);animation:sponsoredPulse 2s ease-in-out infinite;display:flex;align-items:center;justify-content:center}
+.custom-marker.sponsored::after{content:'★';color:#fff;font-size:12px;line-height:1;text-shadow:0 1px 2px rgba(0,0,0,0.3)}
+.custom-marker.sponsored-logo{width:56px;height:56px;background:#fff;border:3px solid #F59E0B;box-shadow:0 0 0 5px rgba(245,158,11,0.2),0 4px 20px rgba(245,158,11,0.4);animation:sponsoredPulse 2s ease-in-out infinite;padding:0;overflow:visible}
+.custom-marker.sponsored-logo::after{display:none}
+.custom-marker.sponsored-logo img{width:50px;height:50px;object-fit:cover;border-radius:50%;display:block}
+.custom-marker.sponsored-logo .sponsor-star{position:absolute;bottom:-4px;right:-4px;width:20px;height:20px;background:linear-gradient(135deg,#F59E0B,#EF4444);border-radius:50%;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;line-height:1;box-shadow:0 2px 6px rgba(245,158,11,.5)}
+.custom-marker.sponsored-logo .marker-count{position:absolute;top:-8px;left:50%;transform:translateX(-50%);height:18px;background:var(--cyan);color:#fff;border-radius:9px;border:2px solid #fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 6px;box-shadow:0 2px 6px rgba(0,0,0,.2);white-space:nowrap}
+@keyframes sponsoredPulse{0%,100%{box-shadow:0 2px 12px rgba(245,158,11,0.5)}50%{box-shadow:0 2px 22px rgba(245,158,11,0.8)}}
+.leaflet-popup-content-wrapper{border-radius:14px!important;padding:0!important;box-shadow:0 8px 30px rgba(0,0,0,.15)!important;overflow:hidden}
+.leaflet-container{touch-action:manipulation}
+.leaflet-popup-content{margin:0!important;min-width:340px}
+.popup-wide-wrap .leaflet-popup-content{min-width:520px}
+.leaflet-popup-tip{display:none}
+.popup-inner{padding:0;font-family:'DM Sans',sans-serif}
+.popup-header-d{padding:16px 18px;background:linear-gradient(135deg,var(--cyan),#38BDF8);color:#fff;border-radius:14px 14px 0 0}
+.popup-header-d .popup-dest{font-size:1rem;font-weight:800}
+.popup-header-d .popup-count{font-size:.74rem;opacity:.8;margin-top:2px}
+.popup-list-d{padding:10px;display:flex;flex-direction:column;gap:7px}
+.popup-list-d.popup-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.popup-mini{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;background:#fff;border:1.5px solid var(--border);cursor:pointer;text-decoration:none;color:var(--text);transition:all .15s}
+.popup-mini:hover{border-color:var(--cyan);box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.popup-mini.sponsored{border:2px solid var(--orange);background:linear-gradient(135deg,rgba(245,158,11,.08),rgba(245,158,11,.02));box-shadow:0 0 0 2px rgba(245,158,11,.08)}
+.popup-mini.sponsored:hover{border-color:#D97706;box-shadow:0 0 0 2px rgba(245,158,11,.15),0 4px 12px rgba(245,158,11,.12)}
+.popup-mini.sponsored .popup-logo{border-color:var(--orange);box-shadow:0 0 0 3px rgba(245,158,11,.15)}
+.popup-mini .popup-logo-init{width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#94a3b8,#64748b);display:flex;align-items:center;justify-content:center;color:#fff;font-size:.9rem;font-weight:800;flex-shrink:0}
+.popup-mini .popup-name{font-size:.85rem;font-weight:700;flex:1}
+.popup-mini.sponsored .popup-name{color:#B45309}
+.popup-grid .popup-mini{flex-direction:column;text-align:center;gap:6px;padding:12px 8px}
+.popup-grid .popup-mini .popup-name{flex:none;font-size:.76rem;line-height:1.3}
+.popup-mini .popup-logo{width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid var(--border);flex-shrink:0}
+.popup-btn{display:inline-block;background:var(--cyan);color:#fff;font-size:0.75rem;font-weight:600;padding:5px 12px;border-radius:4px;cursor:pointer;border:none;font-family:inherit}
+.popup-btn:hover{background:var(--primary-light)}
+
+/* Cluster fix: vertical centering */
+.marker-cluster-small,.marker-cluster-medium,.marker-cluster-large{background:rgba(44,181,200,0.15)!important}
+.marker-cluster-small div,.marker-cluster-medium div,.marker-cluster-large div{background:var(--cyan)!important;color:#fff!important;font-family:'DM Sans',sans-serif!important;font-weight:700!important;display:flex!important;align-items:center!important;justify-content:center!important;line-height:1!important}
+
+/* Scrollbar */
+.dmc-list::-webkit-scrollbar,.detail-panel::-webkit-scrollbar,.filters-body::-webkit-scrollbar{width:5px}
+.dmc-list::-webkit-scrollbar-track,.detail-panel::-webkit-scrollbar-track,.filters-body::-webkit-scrollbar-track{background:transparent}
+.dmc-list::-webkit-scrollbar-thumb,.detail-panel::-webkit-scrollbar-thumb,.filters-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+/* ===== MOBILE ===== */
+@media(max-width:768px){
+  .filters-popup{width:100%;max-width:none;height:100%;max-height:100%;border-radius:0;display:flex;flex-direction:column;position:fixed;inset:0}
+  .filters-popup .filters-popup-header{flex-shrink:0}
+  .filters-popup .filters-popup-scroll{flex:1;overflow-y:scroll;-webkit-overflow-scrolling:touch;touch-action:pan-y;overscroll-behavior:contain;min-height:0}
+  .filters-popup .filters-popup-footer{flex-shrink:0;box-shadow:0 -4px 12px rgba(0,0,0,.08)}
+  .modal-content{inset:0;border-radius:0;width:100vw;height:100vh;height:100dvh}
+  .main-layout{flex-direction:column}
+  .sidebar{width:100%;max-height:50vh;max-height:50dvh;border-right:none;border-bottom:1px solid var(--border)}
+  .map-panel{min-height:50vh;min-height:50dvh}
+  .detail-panel{width:100%;position:fixed;inset:0;z-index:10001;transform:translateY(100%);border-radius:0;height:100%}
+  .detail-panel.open{transform:translateY(0)}
+  .detail-panel .detail-body{-webkit-overflow-scrolling:touch;touch-action:pan-y;overscroll-behavior:contain;padding-bottom:80px;overflow-y:scroll}
+  .embed-container{height:300px}
+  .embed-overlay h2{font-size:1.1rem}
+  .topbar{padding:10px 14px;position:sticky;top:0;z-index:100}
+}
+@media(max-width:480px){
+  .topbar{padding:8px 12px}
+  .topbar-left{font-size:0.85rem}
+  .topbar-left svg{display:none}
+  .sidebar{max-height:45vh;max-height:45dvh}
+}
+</style>
+</head>
+<body>
+
+<!-- EMBED -->
+<div class="embed-container" id="embedContainer" onclick="openModal()">
+  <div id="embedMap" class="embed-map"></div>
+  <div class="embed-overlay" id="embedOverlay">
+    <h2>🌍 Carte des DMC / Réceptifs</h2>
+    <p>Trouvez votre agence réceptive par destination et spécialité</p>
+    <button class="embed-btn">Explorer la carte</button>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-backdrop" id="modal">
+ <div class="modal-content">
+  <div class="topbar">
+   <div class="topbar-left">
+    <img src="https://www.tourmag.com/my/test/carte_des_dmc/Logo-DestimagNoir-RVB.png" width="100">
+    Annuaire des DMC
+    <span class="topbar-count" id="topbarCount"></span>
+   </div>
+   <button class="btn-close" onclick="closeModal()" title="Fermer">✕</button>
+  </div>
+  <div class="main-layout">
+   <div class="sidebar">
+    <div class="search-box">
+     <div class="search-wrap">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      <input type="text" id="searchInput" placeholder="Rechercher un DMC, un pays, une destination…" oninput="applyFilters()">
+     </div>
+    </div>
+    <div class="filters-section">
+     <button class="filters-toggle" id="filtersToggle" onclick="toggleFilters()">
+      <span>⚙ Filtres avancés <span class="active-filters-count" id="activeFiltersCount" style="display:none">0</span></span>
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+     </button>
+    </div>
+    <div class="dmc-list-header" id="dmcListHeader"></div>
+    <div class="dmc-list" id="dmcList"></div>
+   </div>
+   <div class="map-panel">
+    <button class="map-reset-btn" onclick="mainMap.setView([25,10],2,{animate:true})" title="Vue mondiale">🌍</button>
+    <div id="mainMap"></div>
+
+<!-- FILTERS POPUP -->
+<div class="filters-popup-backdrop" id="filtersPopup" onclick="if(event.target===this)closeFiltersPopup()">
+ <div class="filters-popup">
+  <div class="filters-popup-header">
+   <span>⚙ Filtres avancés</span>
+   <button onclick="closeFiltersPopup()">✕</button>
+  </div>
+  <div class="filters-popup-scroll">
+   <div class="filter-row">
+    <span class="filter-label">Zone géographique</span>
+    <select class="filter-select" id="filterContinent" onchange="applyFilters()"><option value="">Toutes les zones</option></select>
+   </div>
+   <div class="filter-row">
+    <span class="filter-label">Pays / Destination</span>
+    <select class="filter-select" id="filterCountry" onchange="applyFilters()"><option value="">Tous les pays</option></select>
+   </div>
+   <div class="filters-actions" style="margin:8px 0">
+    <button class="btn-reset" onclick="resetFilters()">✕ Réinitialiser les filtres</button>
+   </div>
+   <div class="filter-category-label" style="color:var(--primary-dark)">Clientèle</div>
+   <div class="filter-chips" id="chipsClientele"></div>
+   <div class="filter-category-label" style="color:#2D7A3A">Prestations</div>
+   <div id="groupsPrestations"></div>
+   <div class="filter-category-label" style="color:#B06520">Activités / Thématiques</div>
+   <div id="groupsActivites"></div>
+  </div>
+  <div class="filters-popup-footer">
+   <button onclick="closeFiltersPopup()">Appliquer les filtres</button>
+  </div>
+ </div>
+</div>
+    <div class="detail-panel" id="detailPanel">
+     <div class="detail-header" id="detailHeader"></div>
+     <div class="detail-body" id="detailBody"></div>
+    </div>
+   </div>
+  </div>
+ </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script>
+// =====================================================================
+// FIREBASE CONFIGURATION
+// =====================================================================
+firebase.initializeApp({
+  apiKey: "AIzaSyDZ4T1d0YiuxDb116xx8uFHfW9k__vh4FE",
+  authDomain: "destimap-e901b.firebaseapp.com",
+  projectId: "destimap-e901b",
+  storageBucket: "destimap-e901b.firebasestorage.app",
+  messagingSenderId: "903190091312",
+  appId: "1:903190091312:web:410bdeef59aafa451ffff5"
+});
+const db = firebase.firestore();
+const PICTO_BASE = 'https://www.tourmag.com/docs/FicheDMC/picto_';
+
+// Nettoyage des textes résiduels du scraping
+function cleanDest(d) {
+  if (!d) return '';
+  let c = d.replace(/[\\/""«»\u201c\u201d]/g, '').replace(/\.{2,}/g, '').trim();
+  if (c.length < 2 || /^Date\b/i.test(c)) return '';
+  return c;
+}
+
+// Normalise les accents pour comparaison (utilisé pour dédoublonner)
+function normalizeForCompare(s) {
+  return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+}
+
+// =====================================================================
+// REGROUPEMENTS
+// =====================================================================
+const PRESTATION_GROUPS = {
+  "MICE & Business": ["conference", "congres", "meeting", "team_building", "mice", "incentive"],
+  "Type de voyage": ["circuit", "city", "autotour", "sur_mesure", "luxe"],
+  "Éco & Responsable": ["eco_responsable", "slow_tourisme", "tourisme_responsable2", "nature"],
+  "Hébergement & Transport": ["hotel", "transferts", "vtc", "concierge"],
+  "Accompagnement": ["acceuil", "assistance", "adaptabilite", "visite_guidee"],
+  "Autres prestations": ["passion", "creativite", "efficacite", "medical"]
+};
+
+const ACTIVITE_GROUPS = {
+  "Randonnée & Montagne": ["rando", "trekking", "trail", "escalade", "escalade-rando", "raquettes", "viaferrata", "montagne", "rando-contee"],
+  "Sports nautiques": ["plongee", "snorkeling", "surf", "kite", "canoe", "rafting", "peche", "bateau", "char-a-voile"],
+  "Culture & Patrimoine": ["culture", "culture_patrimoine", "archeologie", "architecture", "histoire", "livre", "decouverte", "village"],
+  "Gastronomie & Terroir": ["resto", "oenologie", "vendanges", "permaculture"],
+  "Nature & Animaux": ["safari2", "observation_animale", "insecte", "aventure", "jardin", "preservation_animale"],
+  "Sport & Plein air": ["sport", "velo", "golf", "ski", "ski-de-fond", "biathlon", "equitation", "accrobranche"],
+  "Bien-être & Spirituel": ["massage", "yoga", "spirituel"],
+  "Événements & Loisirs": ["carnaval", "concert", "feu_d_artifice", "noel", "nouvel_an", "illuminations", "casino", "soiree_gala", "attractions", "musique"],
+  "Divers": ["photo", "shooting_photo", "video", "montgolfiere", "liguistique", "mode", "manuel", "genealogie", "surpris", "thematique", "cadeau", "peinture", "source-eau-chaude", "avion-2", "train", "train2", "traineau", "voyage", "excursions", "ane", "astronomie", "druide", "voyage_de_noce", "terre"]
+};
+
+let allDMC = [];
+let filteredDMC = [];
+let mainMap, embedMapInstance, markerClusterGroup;
+let markers = [];
+let activeDMC = null;
+
+// Coordonnées GPS par pays/destination (fallback si pas stocké en base)
+const GEO={"açores":[38.7222,-27.2206],"afrique":[8.7832,34.5085],"afrique du sud":[-30.5595,22.9375],"alaska":[64.2008,-152.4937],"albanie":[41.1533,20.1683],"algérie":[28.0339,1.6596],"algerie":[28.0339,1.6596],"allemagne":[51.1657,10.4515],"amazonie":[-3.4653,-62.2159],"arabie saoudite":[23.8859,45.0792],"argentine":[-38.4161,-63.6167],"armenie":[40.0691,45.0382],"arménie":[40.0691,45.0382],"asie":[34.0479,100.6197],"asie du sud-est":[10.0,106.0],"autriche":[47.5162,14.5501],"azerbaidjan":[40.1431,47.5769],"azerbaïdjan":[40.1431,47.5769],"belize":[17.1899,-88.4976],"bhoutan":[27.5142,90.4336],"birmanie":[21.9162,95.956],"bolivie":[-16.2902,-63.5887],"bosnie":[43.9159,17.6791],"bosnie-herzégovine":[43.9159,17.6791],"brésil":[-14.235,-51.9253],"bresil":[-14.235,-51.9253],"bulgarie":[42.7339,25.4858],"cambodge":[12.5657,104.991],"canada":[56.1304,-106.3468],"cap-vert":[16.5388,-23.0418],"cap vert":[16.5388,-23.0418],"chili":[-35.6751,-71.543],"chine":[35.8617,104.1954],"chypre":[35.1264,33.4299],"colombie":[4.5709,-74.2973],"corée du nord":[40.3399,127.5101],"coree du nord":[40.3399,127.5101],"corée du sud":[35.9078,127.7669],"coree du sud":[35.9078,127.7669],"costa rica":[9.7489,-83.7534],"croatie":[45.1,15.2],"cuba":[21.5218,-77.7812],"danemark":[56.2639,9.5018],"ecosse":[56.4907,-4.2026],"écosse":[56.4907,-4.2026],"egypte":[26.8206,30.8025],"égypte":[26.8206,30.8025],"émirats arabes unis":[23.4241,53.8478],"emirats arabes unis":[23.4241,53.8478],"equateur":[-1.8312,-78.1834],"équateur":[-1.8312,-78.1834],"espagne":[40.4637,-3.7492],"etats-unis":[37.0902,-95.7129],"états-unis":[37.0902,-95.7129],"usa":[37.0902,-95.7129],"finlande":[61.9241,25.7482],"georgie":[42.3154,43.3569],"géorgie":[42.3154,43.3569],"grèce":[39.0742,21.8243],"grece":[39.0742,21.8243],"guatemala":[15.7835,-90.2308],"guyane":[3.9339,-53.1258],"guyane française":[3.9339,-53.1258],"ile de la réunion":[-21.1151,55.5364],"ile de la reunion":[-21.1151,55.5364],"île de la réunion":[-21.1151,55.5364],"ile maurice":[-20.3484,57.5522],"île maurice":[-20.3484,57.5522],"maurice":[-20.3484,57.5522],"la réunion":[-21.1151,55.5364],"réunion":[-21.1151,55.5364],"reunion":[-21.1151,55.5364],"inde":[20.5937,78.9629],"indochine":[16.0,107.0],"indonésie":[-0.7893,113.9213],"indonesie":[-0.7893,113.9213],"irlande":[53.1424,-7.6921],"irlande du nord":[54.7877,-6.4923],"islande":[64.9631,-19.0208],"italie":[41.8719,12.5674],"japon":[36.2048,138.2529],"jordanie":[30.5852,36.2384],"kazakhstan":[48.0196,66.9237],"kenya":[-0.0236,37.9062],"kirghizistan":[41.2044,74.7661],"kosovo":[42.6026,20.903],"laos":[19.8563,102.4955],"macédoine":[41.5122,21.7453],"macédoine du nord":[41.5122,21.7453],"macedoine du nord":[41.5122,21.7453],"madagascar":[-18.7669,46.8691],"madère":[32.7607,-16.9595],"madere":[32.7607,-16.9595],"malaisie":[4.2105,101.9758],"malte":[35.9375,14.3754],"maroc":[31.7917,-7.0926],"mexique":[23.6345,-102.5528],"mongolie":[46.8625,104.1917],"monténégro":[42.7087,19.3744],"montenegro":[42.7087,19.3744],"myanmar":[21.9162,95.956],"namibie":[-22.9576,18.4904],"népal":[28.3949,84.124],"nepal":[28.3949,84.124],"nicaragua":[12.8654,-85.2072],"norvège":[60.472,8.4689],"norvege":[60.472,8.4689],"océan indien":[-12.0,55.0],"océanie":[-22.7359,140.0188],"oman":[21.4735,55.9754],"ouganda":[1.3733,32.2903],"ouzbékistan":[41.3775,64.5853],"ouzbekistan":[41.3775,64.5853],"panama":[8.538,-80.7821],"pérou":[-9.19,-75.0152],"perou":[-9.19,-75.0152],"philippines":[12.8797,121.774],"polynésie française":[-17.6797,-149.4068],"polynesie francaise":[-17.6797,-149.4068],"polynésie":[-17.6797,-149.4068],"portugal":[39.3999,-8.2245],"pouilles":[41.0,16.5],"qatar":[25.3548,51.1839],"roumanie":[45.9432,24.9668],"royaume-uni":[55.3781,-3.436],"rwanda":[-1.9403,29.8739],"sardaigne":[40.1209,9.0129],"serbie":[44.0165,21.0059],"sicile":[37.6,14.0154],"slovénie":[46.1512,14.9955],"slovenie":[46.1512,14.9955],"sous-continent indien":[20.0,78.0],"sri lanka":[7.8731,80.7718],"suisse":[46.8182,8.2275],"tadjikistan":[38.861,71.2761],"tahiti":[-17.6509,-149.426],"tanzanie":[-6.369,34.8888],"thaïlande":[15.87,100.9925],"thailande":[15.87,100.9925],"tunisie":[33.8869,9.5375],"turkménistan":[38.9697,59.5563],"turkmenistan":[38.9697,59.5563],"turquie":[38.9637,35.2433],"venezuela":[6.4238,-66.5897],"vietnam":[14.0583,108.2772],"zanzibar":[-6.1659,39.1989],"afghanistan":[33.9391,67.71],"andorre":[42.5063,1.5218],"angola":[-11.2027,17.8739],"australie":[-25.2744,133.7751],"bahamas":[25.0343,-77.3963],"bangladesh":[23.685,90.3563],"belgique":[50.8503,4.3517],"biélorussie":[53.7098,27.9534],"botswana":[-22.3285,24.6849],"brunei":[4.9353,114.9428],"burkina faso":[12.3714,-1.5197],"cameroun":[7.3697,12.3547],"dominique":[15.415,-61.371],"estonie":[58.5953,25.0136],"ethiopie":[9.145,40.4897],"éthiopie":[9.145,40.4897],"fidji":[-17.7134,178.065],"france":[46.2276,2.2137],"gabon":[-0.8037,11.6094],"ghana":[7.9465,-1.0232],"guinée":[9.9456,-9.6966],"guinee":[9.9456,-9.6966],"honduras":[15.2,-86.2419],"hongrie":[47.1625,19.5033],"irak":[33.2232,43.6793],"iran":[32.4279,53.688],"israël":[31.0461,34.8516],"israel":[31.0461,34.8516],"jamaïque":[18.1096,-77.2975],"jamaique":[18.1096,-77.2975],"koweït":[29.3117,47.4818],"koweit":[29.3117,47.4818],"lettonie":[56.8796,24.6032],"liban":[33.8547,35.8623],"lituanie":[55.1694,23.8813],"luxembourg":[49.8153,6.1296],"maldives":[3.2028,73.2207],"mali":[17.5707,-3.9962],"mauritanie":[21.0079,-10.9408],"moldavie":[47.4116,28.3699],"mozambique":[-18.6657,35.5296],"nigéria":[9.082,8.6753],"nigeria":[9.082,8.6753],"nouvelle-calédonie":[-20.9043,165.618],"nouvelle-caledonie":[-20.9043,165.618],"nouvelle-zélande":[-40.9006,174.886],"nouvelle-zelande":[-40.9006,174.886],"pakistan":[30.3753,69.3451],"palestine":[31.9522,35.2332],"papouasie":[-6.315,143.9555],"paraguay":[-23.4425,-58.4438],"pays-bas":[52.1326,5.2913],"pologne":[51.9194,19.1451],"russie":[61.524,105.3188],"république dominicaine":[18.7357,-70.1627],"republique dominicaine":[18.7357,-70.1627],"république tchèque":[49.8175,15.473],"republique tcheque":[49.8175,15.473],"sénégal":[14.4974,-14.4524],"senegal":[14.4974,-14.4524],"seychelles":[-4.6796,55.492],"singapour":[1.3521,103.8198],"slovaquie":[48.669,19.699],"somalie":[5.1521,46.1996],"soudan":[12.8628,30.2176],"suède":[60.1282,18.6435],"suede":[60.1282,18.6435],"taïwan":[23.6978,120.9605],"taiwan":[23.6978,120.9605],"tchad":[15.4542,18.7322],"togo":[8.6195,1.208],"ukraine":[48.3794,31.1656],"uruguay":[-32.5228,-55.7658],"yémen":[15.5527,48.5164],"yemen":[15.5527,48.5164],"zambie":[-13.1339,28.6387],"zimbabwe":[-19.0154,29.1549],"guinée-bissau":[12.0,-15.0],"guinee-bissau":[12.0,-15.0],"guinee bissau":[12.0,-15.0],"libéria":[6.4281,-9.4295],"liberia":[6.4281,-9.4295],"sierra leone":[8.4606,-11.7799]};
+
+function ensureCoordinates(dmc) {
+  // Générer les coordonnées à partir de TOUTES les destinations (primary + proposées)
+  const seen = new Set();
+  const computed = [];
+  const allRaw = [...(dmc.primary_destinations || []), ...(dmc.destinations || [])];
+  allRaw.forEach(dest => {
+    const key = dest.toLowerCase().trim();
+    if (seen.has(key)) return;
+    seen.add(key);
+    const coord = GEO[key];
+    if (coord) {
+      computed.push({ lat: coord[0], lng: coord[1], destination: dest });
+    }
+  });
+  dmc.coordinates = computed;
+}
+
+// =====================================================================
+// CHARGEMENT DEPUIS FIRESTORE
+// =====================================================================
+async function loadData() {
+  try {
+    const snap = await db.collection('dmc').get();
+    allDMC = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter(d => d.status !== 'draft');
+    allDMC.forEach(ensureCoordinates);
+    filteredDMC = [...allDMC].sort((a, b) => (a.title || '').localeCompare(b.title || '', 'fr'));
+    buildFilters();
+    renderList();
+    renderMarkers();
+    updateCount();
+    initEmbedMap();
+  } catch(e) {
+    console.error('Erreur chargement données DMC:', e);
+    document.getElementById('dmcList').innerHTML = '<div class="no-results"><p>Erreur de chargement des données.</p></div>';
+  }
+}
+
+// =====================================================================
+// FILTRES DYNAMIQUES
+// =====================================================================
+function buildFilters() {
+  const continents = new Set();
+  const countryMap = new Map(); // key=normalized, value=display name (with accents)
+  const foundTags = { clientele: new Map(), prestations: new Map(), activites: new Map() };
+
+  allDMC.forEach(dmc => {
+    (dmc.continents || []).forEach(c => continents.add(c));
+    [...(dmc.destinations || []), ...(dmc.primary_destinations || [])].forEach(d => {
+      let clean = cleanDest(d);
+      if (clean) {
+        let key = normalizeForCompare(clean);
+        if (!countryMap.has(key) || clean.length > countryMap.get(key).length) {
+          countryMap.set(key, clean);
+        }
+      }
+    });
+    ['clientele', 'prestations', 'activites'].forEach(cat => {
+      (dmc.tags[cat] || []).forEach(t => foundTags[cat].set(t.id, t.label));
+    });
+  });
+
+  // Selects
+  const selC = document.getElementById('filterContinent');
+  [...continents].sort().forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = c; selC.appendChild(o); });
+  const selP = document.getElementById('filterCountry');
+  const countryList = [...countryMap.values()].sort((a,b) => a.localeCompare(b,'fr'));
+  countryList.forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = c; selP.appendChild(o); });
+
+  // Clientèle (pas de sous-groupes, assez peu)
+  buildChipsFlat('chipsClientele', foundTags.clientele);
+
+  // Prestations groupées
+  buildGroupedChips('groupsPrestations', PRESTATION_GROUPS, foundTags.prestations);
+
+  // Activités groupées
+  buildGroupedChips('groupsActivites', ACTIVITE_GROUPS, foundTags.activites);
+}
+
+function buildChipsFlat(containerId, tagMap) {
+  const container = document.getElementById(containerId);
+  [...tagMap.entries()].sort((a,b) => a[1].localeCompare(b[1],'fr')).forEach(([id, label]) => {
+    const chip = document.createElement('div');
+    chip.className = 'filter-chip';
+    chip.dataset.tagId = id;
+    chip.textContent = label;
+    chip.onclick = () => { chip.classList.toggle('active'); applyFilters(); };
+    container.appendChild(chip);
+  });
+}
+
+function buildGroupedChips(containerId, groupDef, tagMap) {
+  const container = document.getElementById(containerId);
+  Object.entries(groupDef).forEach(([groupName, tagIds]) => {
+    // Filtrer : ne garder que les tags qui existent dans les données, dédupliquer par label
+    const seenLabels = new Set();
+    const existing = [];
+    tagIds.forEach(id => {
+      if (tagMap.has(id)) {
+        const label = tagMap.get(id);
+        if (!seenLabels.has(label.toLowerCase())) {
+          seenLabels.add(label.toLowerCase());
+          existing.push(id);
+        }
+      }
+    });
+    if (existing.length === 0) return;
+
+    const group = document.createElement('div');
+    group.className = 'filter-group';
+
+    const header = document.createElement('div');
+    header.className = 'filter-group-header';
+    header.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 6 15 12 9 18"/></svg>
+      <span>${groupName}</span>
+      <span class="group-count">${existing.length}</span>`;
+    header.onclick = () => {
+      header.classList.toggle('open');
+      body.classList.toggle('open');
+    };
+
+    const body = document.createElement('div');
+    body.className = 'filter-group-body';
+    const chips = document.createElement('div');
+    chips.className = 'filter-chips';
+
+    existing.forEach(id => {
+      const label = tagMap.get(id);
+      const chip = document.createElement('div');
+      chip.className = 'filter-chip';
+      chip.dataset.tagId = id;
+      chip.textContent = label;
+      chip.onclick = (e) => { e.stopPropagation(); chip.classList.toggle('active'); applyFilters(); };
+      chips.appendChild(chip);
+    });
+
+    body.appendChild(chips);
+    group.appendChild(header);
+    group.appendChild(body);
+    container.appendChild(group);
+  });
+}
+
+// =====================================================================
+// APPLICATION DES FILTRES
+// =====================================================================
+function applyFilters() {
+  const search = document.getElementById('searchInput').value.toLowerCase().trim();
+  const continent = document.getElementById('filterContinent').value;
+  const country = document.getElementById('filterCountry').value;
+
+  const activeChips = [];
+  document.querySelectorAll('.filter-chip.active').forEach(c => activeChips.push(c.dataset.tagId));
+
+  filteredDMC = allDMC.filter(dmc => {
+    if (search) {
+      const hay = [dmc.title, dmc.description, ...(dmc.destinations||[]), ...(dmc.primary_destinations||[]), ...(dmc.continents||[])].join(' ').toLowerCase();
+      if (!hay.includes(search)) return false;
+    }
+    if (continent && !(dmc.continents||[]).includes(continent)) return false;
+    if (country) {
+      const countryNorm = normalizeForCompare(country);
+      const dmcDests = [...(dmc.destinations||[]), ...(dmc.primary_destinations||[])].map(d => normalizeForCompare(d));
+      if (!dmcDests.includes(countryNorm)) return false;
+    }
+
+    if (activeChips.length > 0) {
+      const allDmcTags = [
+        ...(dmc.tags.clientele||[]).map(t=>t.id),
+        ...(dmc.tags.prestations||[]).map(t=>t.id),
+        ...(dmc.tags.activites||[]).map(t=>t.id)
+      ];
+      if (!activeChips.every(id => allDmcTags.includes(id))) return false;
+    }
+    return true;
+  });
+
+  filteredDMC.sort((a, b) => (a.title || '').localeCompare(b.title || '', 'fr'));
+
+  renderList();
+  renderMarkers();
+  updateCount();
+  updateActiveFiltersCount();
+
+  // Auto-zoom on continent if search matches a continent name
+  if (search && mainMap) {
+    const CONTINENT_BOUNDS = {
+      'afrique': [[-35, -20], [37, 52]],
+      'ameriques': [[-56, -130], [72, -30]],
+      'amériques': [[-56, -130], [72, -30]],
+      'amérique': [[-56, -130], [72, -30]],
+      'asie': [[0, 40], [55, 145]],
+      'europe': [[35, -12], [72, 45]],
+      'moyen-orient': [[12, 25], [42, 63]],
+      'moyen orient': [[12, 25], [42, 63]],
+      'océan indien': [[-25, 35], [12, 80]],
+      'ocean indien': [[-25, 35], [12, 80]],
+      'océanie': [[-50, 110], [0, 180]],
+      'oceanie': [[-50, 110], [0, 180]],
+    };
+    const bounds = CONTINENT_BOUNDS[search];
+    if (bounds) {
+      mainMap.fitBounds(bounds, { padding: [30, 30], animate: true });
+    }
+  }
+}
+
+function updateActiveFiltersCount() {
+  let count = 0;
+  if (document.getElementById('filterContinent').value) count++;
+  if (document.getElementById('filterCountry').value) count++;
+  document.querySelectorAll('.filter-chip.active').forEach(() => count++);
+  const badge = document.getElementById('activeFiltersCount');
+  if (count > 0) { badge.style.display = ''; badge.textContent = count; }
+  else { badge.style.display = 'none'; }
+}
+
+function resetFilters() {
+  document.getElementById('searchInput').value = '';
+  document.getElementById('filterContinent').value = '';
+  document.getElementById('filterCountry').value = '';
+  document.querySelectorAll('.filter-chip.active').forEach(c => c.classList.remove('active'));
+  applyFilters();
+}
+
+function toggleFilters() {
+  document.getElementById('filtersPopup').classList.add('open');
+}
+function closeFiltersPopup() {
+  document.getElementById('filtersPopup').classList.remove('open');
+  applyFilters();
+}
+
+// =====================================================================
+// LISTE
+// =====================================================================
+function getGroupName(title) {
+  // Known multi-fiche brand prefixes
+  const brandPrefixes = [['Terra ', 'Terra Panamerica'], ['Breathe In Travel', null], ['Abbey Tours', null], ['Aurora Travel', null], ['Balkania Tour', null], ['Easia Travel', null], ['Envie de Maghreb', null], ['Jans Tours', null], ['Phoenix Voyages', null], ['Tanganyika Expeditions', null], ['Tarandro', null], ['Tucaya Travel', null]];
+  for (const [prefix, alias] of brandPrefixes) {
+    if (title.startsWith(prefix)) return (alias || prefix).trim();
+  }
+  const seps = [', DMC', ', Réceptif', ', réceptif', ', Votre', ', un '];
+  for (const sep of seps) {
+    if (title.includes(sep)) return title.split(sep)[0].trim();
+  }
+  return title.trim();
+}
+
+function renderList() {
+  const header = document.getElementById('dmcListHeader');
+  const list = document.getElementById('dmcList');
+  header.textContent = `${filteredDMC.length} DMC / réceptif${filteredDMC.length > 1 ? 's' : ''} trouvé${filteredDMC.length > 1 ? 's' : ''}`;
+
+  if (filteredDMC.length === 0) {
+    list.innerHTML = '<div class="no-results"><p>Aucun DMC ne correspond à vos critères.</p><p>Essayez de modifier vos filtres.</p></div>';
+    return;
+  }
+
+  // Group by base name
+  const groups = new Map();
+  filteredDMC.forEach(dmc => {
+    const g = getGroupName(dmc.title || '');
+    if (!groups.has(g)) groups.set(g, []);
+    groups.get(g).push(dmc);
+  });
+
+  // Sort: sponsored first, then alphabetical
+  const sortedGroups = [...groups.entries()].sort((a, b) => {
+    const aS = a[1].some(d => d.sponsored) ? 0 : 1;
+    const bS = b[1].some(d => d.sponsored) ? 0 : 1;
+    if (aS !== bS) return aS - bS;
+    return a[0].localeCompare(b[0], 'fr');
+  });
+
+  let html = '';
+  sortedGroups.forEach(([groupName, dmcs]) => {
+    const isSpon = dmcs.some(d => d.sponsored);
+    const firstDmc = dmcs[0];
+    const imgSrc = firstDmc.image || '';
+
+    if (dmcs.length === 1) {
+      // Single fiche — direct click
+      const dmc = dmcs[0];
+      // Show all proposed destinations
+      const allDests = [...new Set([...(dmc.primary_destinations || []), ...(dmc.destinations || [])])];
+      const destStr = allDests.join(', ');
+      const topTags = [...(dmc.tags?.clientele || []).slice(0, 2), ...(dmc.tags?.prestations || []).slice(0, 2)].map(t => `<span class="dmc-card-tag">${t.label}</span>`).join('');
+      const safeUrl = dmc.url.replace(/'/g, "\\'");
+      html += `<div class="dmc-card${isSpon ? ' sponsored' : ''}" data-url="${dmc.url}" onclick="selectDMC('${safeUrl}')">
+        ${imgSrc ? `<img class="dmc-card-img" src="${imgSrc}" alt="" loading="lazy" onerror="this.style.display='none'">` : '<div class="dmc-card-img"></div>'}
+        <div class="dmc-card-info">
+          <div class="dmc-card-name">${dmc.title}</div>
+          <div class="dmc-card-dest">${destStr}</div>
+          <div class="dmc-card-tags">${topTags}</div>
+        </div>
+      </div>`;
+    } else {
+      // Multi fiches — grouped with expand
+      // Collect ALL unique destinations from all fiches in the group
+      const allGroupDests = [...new Set(dmcs.flatMap(d => [...(d.primary_destinations || []), ...(d.destinations || [])]))].sort((a,b) => a.localeCompare(b,'fr'));
+      const destStr = allGroupDests.join(', ');
+      const gid = 'grp_' + groupName.replace(/\W/g, '_');
+      html += `<div class="dmc-group">
+        <div class="dmc-group-header${isSpon ? ' sponsored' : ''}" onclick="toggleGroup('${gid}')">
+          ${imgSrc ? `<img class="dmc-group-img" src="${imgSrc}" alt="" loading="lazy" onerror="this.style.display='none'">` : '<div class="dmc-group-img"></div>'}
+          <div class="dmc-group-info">
+            <div class="dmc-group-name">${groupName}</div>
+            <div class="dmc-group-meta">${destStr}</div>
+          </div>
+          <span class="dmc-group-count">${dmcs.length} fiches</span>
+        </div>
+        <div class="dmc-group-fiches" id="${gid}">`;
+      dmcs.sort((a,b) => ((a.primary_destinations||[])[0]||'').localeCompare((b.primary_destinations||[])[0]||'','fr')).forEach(dmc => {
+        const pd = (dmc.primary_destinations || []).sort((a,b) => a.localeCompare(b,'fr')).join(', ') || '?';
+        const safeUrl = dmc.url.replace(/'/g, "\\'");
+        html += `<div class="dmc-group-fiche" onclick="event.stopPropagation();selectDMC('${safeUrl}')">
+          <span class="fiche-dest">📍 ${pd}</span>
+        </div>`;
+      });
+      html += `</div></div>`;
+    }
+  });
+
+  list.innerHTML = html;
+}
+
+function toggleGroup(gid) {
+  const el = document.getElementById(gid);
+  if (el) el.classList.toggle('open');
+}
+
+function updateCount() {
+  const el = document.getElementById('topbarCount');
+  if (el) el.textContent = filteredDMC.length;
+}
+
+// =====================================================================
+// CARTE
+// =====================================================================
+function initMainMap() {
+  mainMap = L.map('mainMap', { zoomControl: true, scrollWheelZoom: true, closePopupOnClick: false, tap: false }).setView([25, 10], 2);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    attribution: '© OpenStreetMap © CARTO | © TourMaG.com', maxZoom: 18
+  }).addTo(mainMap);
+  markerClusterGroup = L.markerClusterGroup({
+    maxClusterRadius: 45,
+    spiderfyOnMaxZoom: true,
+    showCoverageOnHover: false,
+    iconCreateFunction: function(cluster) {
+      const count = cluster.getChildCount();
+      let size = 'small';
+      if (count > 20) size = 'large';
+      else if (count > 5) size = 'medium';
+      return L.divIcon({
+        html: '<div>' + count + '</div>',
+        className: 'marker-cluster marker-cluster-' + size,
+        iconSize: L.point(36, 36)
+      });
+    }
+  });
+  mainMap.addLayer(markerClusterGroup);
+  // Desktop only: click on map closes popups
+  if (!('ontouchstart' in window)) {
+    mainMap.on('click', function() { mainMap.closePopup(); });
+  }
+}
+
+// Find the closest fiche (with isPrimary somewhere) for an orphan destination point
+function findClosestFicheUrl(orphanLat, orphanLng, groupName) {
+  // Collect all fiches in this group that have at least one primary destination
+  const groupDMCs = allDMC.filter(d => getGroupName(d.title || '') === groupName);
+  let bestUrl = null;
+  let bestDist = Infinity;
+  groupDMCs.forEach(dmc => {
+    // Check if this fiche has primary destinations with known coordinates
+    const primaries = (dmc.primary_destinations || []);
+    if (primaries.length === 0) return;
+    primaries.forEach(dest => {
+      const coord = GEO[dest.toLowerCase().trim()];
+      if (!coord) return;
+      const dLat = coord[0] - orphanLat;
+      const dLng = coord[1] - orphanLng;
+      const dist = dLat * dLat + dLng * dLng; // Squared distance is fine for comparison
+      if (dist < bestDist) {
+        bestDist = dist;
+        bestUrl = dmc.url;
+      }
+    });
+  });
+  return bestUrl;
+}
+
+function renderMarkers() {
+  if (!mainMap) return;
+  markerClusterGroup.clearLayers();
+  // Remove previously added sponsored markers from map
+  markers.forEach(m => { if (m._isSponsored && mainMap.hasLayer(m)) mainMap.removeLayer(m); });
+  markers = [];
+  const tempMarkers = [];
+  // Group markers by lat/lng, dedupe by group name
+  const pointMap = new Map();
+  filteredDMC.forEach(dmc => {
+    const groupName = getGroupName(dmc.title || '');
+    (dmc.coordinates || []).forEach(coord => {
+      if (coord.lat == null || coord.lng == null) return;
+      const key = coord.lat.toFixed(4) + ',' + coord.lng.toFixed(4);
+      if (!pointMap.has(key)) pointMap.set(key, { lat: coord.lat, lng: coord.lng, dest: coord.destination, entries: [] });
+      const point = pointMap.get(key);
+      // One entry per group per point; prefer the fiche whose primary_destinations match this location
+      const existing = point.entries.find(e => e.group === groupName);
+      if (!existing) {
+        point.entries.push({ group: groupName, dmc: dmc, isPrimary: (dmc.primary_destinations || []).some(pd => pd.toLowerCase() === (coord.destination || '').toLowerCase()) });
+      } else {
+        if (!existing.isPrimary && (dmc.primary_destinations || []).some(pd => pd.toLowerCase() === (coord.destination || '').toLowerCase())) {
+          existing.dmc = dmc;
+          existing.isPrimary = true;
+        }
+        // Propagate sponsored + logo from any fiche in the group
+        if (dmc.sponsored && !existing.dmc.sponsored) {
+          existing.dmc = Object.assign({}, existing.dmc, { sponsored: true, logo_url: dmc.logo_url || existing.dmc.logo_url });
+        }
+        if (dmc.logo_url && !existing.dmc.logo_url) {
+          existing.dmc = Object.assign({}, existing.dmc, { logo_url: dmc.logo_url });
+        }
+      }
+    });
+  });
+  pointMap.forEach(point => {
+    const hasSpon = point.entries.some(e => e.dmc.sponsored);
+    // Check if any sponsored DMC has a logo
+    const sponWithLogo = point.entries.find(e => e.dmc.sponsored && e.dmc.logo_url);
+    let icon;
+    if (sponWithLogo) {
+      const logo = sponWithLogo.dmc.logo_url;
+      const totalEntries = point.entries.length;
+      const otherCount = totalEntries - 1;
+      const countBadge = otherCount > 0 ? '<div class="marker-count">+' + otherCount + ' autre' + (otherCount > 1 ? 's' : '') + ' DMC</div>' : '';
+      icon = L.divIcon({
+        className: 'custom-marker sponsored sponsored-logo',
+        iconSize: [56, 56],
+        iconAnchor: [28, 28],
+        html: '<img src="' + logo + '" alt="" onerror="this.parentNode.classList.remove(\'sponsored-logo\');this.remove()"><div class="sponsor-star">★</div>' + countBadge
+      });
+    } else {
+      const size = hasSpon ? [28, 28] : [20, 20];
+      const anchor = [size[0]/2, size[1]/2];
+      icon = L.divIcon({ className: 'custom-marker' + (hasSpon ? ' sponsored' : ''), iconSize: size, iconAnchor: anchor });
+    }
+    const marker = L.marker([point.lat, point.lng], { icon, zIndexOffset: hasSpon ? 1000 : 0 });
+    let popupHtml;
+    if (point.entries.length === 1) {
+      const e = point.entries[0];
+      const dmc = e.dmc;
+      const logoHtml = dmc.logo_url ? '<img class="popup-logo" src="' + dmc.logo_url + '" alt="" onerror="this.outerHTML=this.nextElementSibling.outerHTML"><span style="display:none" class="popup-logo-init">' + (dmc.title||'?').substring(0,2).toUpperCase() + '</span>' : '<div class="popup-logo-init">' + (dmc.title||'?').substring(0,2).toUpperCase() + '</div>';
+      if (e.isPrimary) {
+        popupHtml = `<div class="popup-inner">
+          <div class="popup-header-d"><div class="popup-dest">${point.dest || ''}</div></div>
+          <div class="popup-list-d">
+            <div class="popup-mini popup-clickable${dmc.sponsored?' sponsored':''}" data-dmc-url="${encodeURIComponent(dmc.url)}" style="cursor:pointer">
+              ${logoHtml}
+              <span class="popup-name">${dmc.title}</span>
+              
+            </div>
+          </div></div>`;
+      } else {
+        const fallbackUrl = findClosestFicheUrl(point.lat, point.lng, e.group);
+        if (fallbackUrl) {
+          popupHtml = `<div class="popup-inner">
+            <div class="popup-header-d"><div class="popup-dest">${point.dest || ''}</div></div>
+            <div class="popup-list-d">
+              <div class="popup-mini popup-clickable${dmc.sponsored?' sponsored':''}" data-dmc-url="${encodeURIComponent(fallbackUrl)}" style="cursor:pointer">
+                ${logoHtml}
+                <span class="popup-name">${e.group}</span>
+              </div>
+            </div></div>`;
+        } else {
+          popupHtml = `<div class="popup-inner">
+            <div class="popup-header-d"><div class="popup-dest">${point.dest || ''}</div></div>
+            <div class="popup-list-d">
+              <div class="popup-mini${dmc.sponsored?' sponsored':''}">
+                ${logoHtml}
+                <span class="popup-name">${e.group}</span>
+              </div>
+            </div></div>`;
+        }
+      }
+    } else {
+      const useGrid = point.entries.length >= 4;
+      popupHtml = `<div class="popup-inner">
+        <div class="popup-header-d">
+          <div class="popup-dest">${point.dest || ''}</div>
+          <div class="popup-count">${point.entries.length} réceptifs disponibles</div>
+        </div>
+        <div class="popup-list-d${useGrid ? ' popup-grid' : ''}">
+        ${point.entries.map(e => {
+          const dmc = e.dmc;
+          const logoH = dmc.logo_url ? '<img class="popup-logo" src="' + dmc.logo_url + '" alt="" onerror="this.outerHTML=this.nextElementSibling.outerHTML"><span style="display:none" class="popup-logo-init">' + (dmc.title||'?').substring(0,2).toUpperCase() + '</span>' : '<div class="popup-logo-init">' + (dmc.title||'?').substring(0,2).toUpperCase() + '</div>';
+          if (e.isPrimary) {
+            return '<div class="popup-mini popup-clickable' + (dmc.sponsored?' sponsored':'') + '" data-dmc-url="' + encodeURIComponent(dmc.url) + '" style="cursor:pointer">' + logoH + '<span class="popup-name">' + e.group + '</span></div>';
+          } else {
+            var fbUrl = findClosestFicheUrl(point.lat, point.lng, e.group);
+            if (fbUrl) {
+              return '<div class="popup-mini popup-clickable' + (dmc.sponsored?' sponsored':'') + '" data-dmc-url="' + encodeURIComponent(fbUrl) + '" style="cursor:pointer">' + logoH + '<span class="popup-name">' + e.group + '</span></div>';
+            }
+            return '<div class="popup-mini' + (dmc.sponsored?' sponsored':'') + '">' + logoH + '<span class="popup-name">' + e.group + '</span></div>';
+          }
+        }).join('')}
+        </div></div>`;
+    }
+    marker.bindPopup(popupHtml, { offset: [0, -4], maxHeight: 450, className: point.entries.length >= 4 ? 'popup-wide-wrap' : '' });
+    if (!('ontouchstart' in window)) {
+      marker.on('mouseover', function() { if (this._closeTimeout) { clearTimeout(this._closeTimeout); this._closeTimeout = null; } this.openPopup(); });
+      marker.on('mouseout', function() { var m = this; m._closeTimeout = setTimeout(function() { m.closePopup(); }, 400); });
+      marker.on('popupopen', function() { var m = this; var popup = this.getPopup(); if (popup && popup.getElement()) { var el = popup.getElement(); el.addEventListener('mouseenter', function() { if (m._closeTimeout) { clearTimeout(m._closeTimeout); m._closeTimeout = null; } }); el.addEventListener('mouseleave', function() { m.closePopup(); }); } });
+    }
+    marker.dmcUrl = point.entries.length === 1 && point.entries[0].isPrimary ? point.entries[0].dmc.url : null;
+    tempMarkers.push(marker);
+    marker._isSponsored = hasSpon;
+  });
+  // Sponsored markers go directly on map (always visible), others go in cluster
+  const clusterMarkers = tempMarkers.filter(m => !m._isSponsored);
+  const sponsoredMarkers = tempMarkers.filter(m => m._isSponsored);
+  markerClusterGroup.addLayers(clusterMarkers);
+  sponsoredMarkers.forEach(m => m.addTo(mainMap));
+  markers = tempMarkers;
+}
+
+// =====================================================================
+// EMBED MAP
+// =====================================================================
+function initEmbedMap() {
+  embedMapInstance = L.map('embedMap', {
+    zoomControl: false, dragging: false, scrollWheelZoom: false,
+    doubleClickZoom: false, touchZoom: false, keyboard: false, attributionControl: false
+  }).setView([30, 10], 2);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(embedMapInstance);
+  allDMC.forEach(dmc => {
+    (dmc.coordinates || []).forEach(coord => {
+      if (coord.lat == null || coord.lng == null) return;
+      L.circleMarker([coord.lat, coord.lng], {
+        radius: 4, fillColor: '#2CB5C8', fillOpacity: 0.8, color: '#fff', weight: 1
+      }).addTo(embedMapInstance);
+    });
+  });
+}
+
+// =====================================================================
+// DETAIL PANEL avec PICTOS
+// =====================================================================
+function selectDMC(url) {
+  const dmc = allDMC.find(d => d.url === url);
+  if (!dmc) return;
+  activeDMC = dmc;
+
+  // Clear previous highlights
+  clearHighlights();
+
+  // Highlight dans la liste
+  document.querySelectorAll('.dmc-card').forEach(c => c.classList.remove('active'));
+  const card = document.querySelector(`.dmc-card[data-url="${url}"]`);
+  if (card) { card.classList.add('active'); card.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+
+  // Find all DMCs in the same group
+  const groupName = getGroupName(dmc.title || '');
+  const groupDMCs = allDMC.filter(d => getGroupName(d.title || '') === groupName);
+  const allGroupCoords = new Set();
+  groupDMCs.forEach(d => {
+    (d.coordinates || []).forEach(c => {
+      if (c.lat != null && c.lng != null) allGroupCoords.add(c.lat.toFixed(4) + ',' + c.lng.toFixed(4));
+    });
+  });
+
+  // Zoom on this specific fiche's primary destinations
+  const primaryCoords = [];
+  (dmc.primary_destinations || []).forEach(dest => {
+    const key = dest.toLowerCase().trim();
+    const coord = GEO[key];
+    if (coord) primaryCoords.push({ lat: coord[0], lng: coord[1] });
+  });
+
+  // Fallback to all coordinates if no primary match
+  const zoomCoords = primaryCoords.length > 0 ? primaryCoords : (dmc.coordinates || []).filter(c => c.lat != null && c.lng != null);
+
+  if (zoomCoords.length > 0 && mainMap) {
+    if (zoomCoords.length === 1) {
+      mainMap.setView([zoomCoords[0].lat, zoomCoords[0].lng], 6, { animate: true });
+    } else {
+      const bounds = L.latLngBounds(zoomCoords.map(c => [c.lat, c.lng]));
+      mainMap.fitBounds(bounds, { padding: [50, 50], maxZoom: 8, animate: true });
+    }
+
+    // Highlight all markers belonging to this group (no popup)
+    setTimeout(() => {
+      markers.forEach(m => {
+        const ll = m.getLatLng();
+        const mKey = ll.lat.toFixed(4) + ',' + ll.lng.toFixed(4);
+        if (allGroupCoords.has(mKey)) {
+          const el = m.getElement ? m.getElement() : m._icon;
+          if (el) el.classList.add('highlighted');
+        }
+      });
+    }, 400);
+  }
+
+  // Remplir le panel
+  const panel = document.getElementById('detailPanel');
+  const header = document.getElementById('detailHeader');
+  const body = document.getElementById('detailBody');
+
+  header.innerHTML = `
+    ${dmc.image ? `<img src="${dmc.image}" alt="${dmc.title}" onerror="this.style.display='none'">` : '<div style="height:140px;background:var(--dark)"></div>'}
+    <button class="detail-close" onclick="closeDetail()">✕</button>`;
+
+  const isSpon = dmc.sponsored === true;
+
+  let html = `
+    <div class="detail-title">${dmc.title}</div>`;
+
+  // Smart destination display
+  const cleanDest = arr => (arr||[]).map(d => d.replace(/[\\/""«»]/g, '').replace(/\.{2,}/g, '').trim()).filter(d => d.length > 1 && !/^Date\b/i.test(d));
+  const primaryDests = cleanDest(dmc.primary_destinations);
+  const allDests = cleanDest(dmc.destinations);
+  const primarySet = new Set(primaryDests.map(d => d.toLowerCase().trim()));
+  const allDestsSet = new Set(allDests.map(d => d.toLowerCase().trim()));
+  const otherDests = allDests.filter(d => !primarySet.has(d.toLowerCase().trim()));
+  // Same if every primary is in allDests and every allDest is in primary
+  const sameDestinations = allDests.length > 0 && primaryDests.every(d => allDestsSet.has(d.toLowerCase().trim())) && otherDests.length === 0;
+
+  if (sameDestinations) {
+    // Identical lists — show ONLY the proposed block, no badges
+    html += `<div class="detail-proposed-dests"><div class="detail-proposed-title">Destinations proposées par ce réceptif</div><div class="detail-proposed-list">${allDests.map(d => `<span class="detail-proposed-tag">${d}</span>`).join('')}</div></div>`;
+  } else {
+    // Show badges for primary
+    if (primaryDests.length > 0) {
+      html += `<div class="detail-destinations">${primaryDests.map(d => `<span class="detail-dest-badge">${d}</span>`).join('')}</div>`;
+    }
+    // Show "Autres destinations" if there are extras
+    if (otherDests.length > 0) {
+      html += `<div class="detail-proposed-dests"><div class="detail-proposed-title">Autres destinations proposées par ce réceptif</div><div class="detail-proposed-list">${otherDests.map(d => `<span class="detail-proposed-tag">${d}</span>`).join('')}</div></div>`;
+    }
+  }
+
+  html += `<div class="detail-desc">${dmc.description}</div>`;
+
+  if (dmc.date_creation) html += `<div class="detail-date">📅 Créé en ${dmc.date_creation}</div>`;
+
+  html += `<a class="detail-link${isSpon ? ' sponsored' : ''}" href="${dmc.url}" target="_blank" rel="noopener">Contactez ce réceptif →</a>`;
+
+  // Latest news
+  var newsArr = dmc.latest_news || [];
+  if (newsArr.length > 0) {
+    var nw = newsArr[0];
+    html += '<div class="detail-news">';
+    html += '<div class="dmcnews-brand">DMC NEWS</div>';
+    html += '<div class="dmcnews-tabs">';
+    html += '<div class="dmcnews-tab active">Dernière actualité</div>';
+    if (newsArr.length > 1) {
+      html += '<button class="dmcnews-tab" onclick="openAllNews()">Toutes les actualités (' + newsArr.length + ')</button>';
+    }
+    html += '</div>';
+    html += '<div class="dmcnews-content">';
+    html += '<a href="' + nw.url + '" target="_blank" class="news-card">';
+    if (nw.image) html += '<img src="' + nw.image + '" alt="" class="news-img">';
+    html += '<div class="news-card-body">';
+    html += '<div class="news-card-title">' + nw.title + '</div>';
+    if (nw.date) html += '<div class="news-card-date">' + nw.date + '</div>';
+    html += '<div class="news-card-read">Lire l\'article →</div>';
+    html += '</div></a>';
+    html += '</div></div>';
+    window._currentDmcNews = newsArr;
+    window._currentDmcTitle = dmc.title;
+  }
+
+  // Event encart (IFTM) - only for sponsored DMCs with event data
+  if (dmc.event_active && dmc.event) {
+    var ev = dmc.event;
+    html += '<div class="event-encart">';
+    if (ev.image) html += '<img class="event-encart-img" src="' + ev.image + '" alt="" onerror="this.style.display=\'none\'">';
+    html += '<div class="event-encart-body">';
+    if (ev.title) html += '<div class="event-encart-title">' + ev.title + '</div>';
+    if (ev.text) html += '<div class="event-encart-text">' + ev.text + '</div>';
+    if (ev.stand) html += '<div class="event-encart-stand">📍 Stand ' + ev.stand + '</div>';
+    if (ev.button_text && ev.button_url) html += '<a class="event-encart-btn" href="' + ev.button_url + '" target="_blank">' + ev.button_text + '</a>';
+    html += '</div></div>';
+  }
+
+  const catConfig = [
+    { key: 'clientele', title: 'Clientèle', cssClass: 'clientele' },
+    { key: 'prestations', title: 'Prestations', cssClass: 'prestations' },
+    { key: 'activites', title: 'Activités / Thématiques', cssClass: 'activites' }
+  ];
+
+  catConfig.forEach(({ key, title, cssClass }) => {
+    const tags = dmc.tags[key] || [];
+    if (tags.length === 0) return;
+    html += `<div class="detail-section-title ${cssClass}">${title}</div><div class="detail-pictos">`;
+    tags.forEach(t => {
+      const pictoUrl = PICTO_BASE + t.id + '.png';
+      html += `<div class="detail-picto"><img src="${pictoUrl}" alt="${t.label}" onerror="this.style.display='none'"><span>${t.label}</span></div>`;
+    });
+    html += `</div>`;
+  });
+
+  body.innerHTML = html;
+  panel.classList.toggle('sponsored-active', isSpon);
+  if (isSpon) {
+    header.insertAdjacentHTML('beforeend', '<div style="position:absolute;bottom:10px;right:10px;background:linear-gradient(135deg,#F59E0B,#EF4444);color:#fff;font-size:.68rem;font-weight:700;padding:4px 10px;border-radius:20px;z-index:2;box-shadow:0 2px 8px rgba(245,158,11,.4)">⭐ Sponsorisé</div>');
+  }
+  panel.classList.add('open');
+}
+
+function clearHighlights() {
+  document.querySelectorAll('.custom-marker.highlighted').forEach(el => el.classList.remove('highlighted'));
+}
+
+function closeDetail() {
+  const panel = document.getElementById('detailPanel');
+  panel.classList.remove('open');
+  panel.classList.remove('sponsored-active');
+  clearHighlights();
+  document.querySelectorAll('.dmc-card').forEach(c => c.classList.remove('active'));
+  activeDMC = null;
+}
+
+// =====================================================================
+// SIZE PARAM
+// =====================================================================
+if(new URLSearchParams(window.location.search).get('size')==='small'){document.getElementById('embedContainer').classList.add('size-small');}
+
+// =====================================================================
+// MODAL
+// =====================================================================
+function openModal() {
+  document.getElementById('modal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  try { window.parent.postMessage({ type: 'dmc-map-open' }, '*'); } catch(e) {}
+  if (!mainMap) {
+    setTimeout(() => { initMainMap(); renderMarkers(); }, 100);
+  } else {
+    setTimeout(() => mainMap.invalidateSize(), 100);
+  }
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+  document.body.style.overflow = '';
+  try { window.parent.postMessage({ type: 'dmc-map-close' }, '*'); } catch(e) {}
+  closeDetail();
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+// Delegated click handler for popup DMC links (avoids inline onclick escaping issues)
+document.addEventListener('click', function(e) {
+  var el = e.target.closest('.popup-clickable');
+  if (el && el.dataset.dmcUrl) {
+    e.preventDefault();
+    e.stopPropagation();
+    selectDMC(decodeURIComponent(el.dataset.dmcUrl));
+  }
+});
+
+// =====================================================================
+// ANALYTICS TRACKING
+// =====================================================================
+const sessionId = 'sess_' + Date.now() + '_' + Math.random().toString(36).slice(2,8);
+const sessionStart = Date.now();
+let searchDebounce = null;
+
+const EXCLUDED_UIDS = ['QRAHUQzp2SVLzCnuNgChKJ8WiW12'];
+
+function trackEvent(type, data = {}) {
+  try {
+    // Ne pas tracker si l'utilisateur est un admin
+    if (localStorage.getItem('dmc_admin_notrack') === '1') return;
+    db.collection('analytics').add({
+      type,
+      ...data,
+      session_id: sessionId,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+      user_agent: navigator.userAgent,
+      screen: window.innerWidth + 'x' + window.innerHeight,
+      referrer: document.referrer || ''
+    });
+  } catch(e) { /* silent */ }
+}
+
+// Track visit on modal open
+const _origOpenModal = openModal;
+openModal = function() {
+  _origOpenModal();
+  trackEvent('visit', { entry: 'modal_open' });
+};
+
+// Track DMC view
+const _origSelectDMC = selectDMC;
+selectDMC = function(url) {
+  const dmc = allDMC.find(d => d.url === url);
+  trackEvent('view_dmc', {
+    dmc_url: url,
+    dmc_title: dmc ? dmc.title : '',
+    dmc_destinations: dmc ? (dmc.primary_destinations || []).join(', ') : ''
+  });
+  _origSelectDMC(url);
+};
+
+// Track searches (debounced)
+const searchInput = document.getElementById('searchInput');
+if (searchInput) {
+  const _origOninput = searchInput.oninput;
+  searchInput.oninput = function(e) {
+    if (_origOninput) _origOninput.call(this, e);
+    clearTimeout(searchDebounce);
+    searchDebounce = setTimeout(() => {
+      const q = this.value.trim();
+      if (q.length >= 2) {
+        trackEvent('search', { query: q, results_count: filteredDMC.length });
+      }
+    }, 1500);
+  };
+}
+
+// Track filter usage
+const _origApplyFilters = applyFilters;
+applyFilters = function() {
+  _origApplyFilters();
+  const continent = document.getElementById('filterContinent').value;
+  const country = document.getElementById('filterCountry').value;
+  const activeChips = [];
+  document.querySelectorAll('.filter-chip.active').forEach(c => activeChips.push(c.textContent));
+  if (continent || country || activeChips.length > 0) {
+    trackEvent('filter', {
+      continent: continent || '',
+      country: country || '',
+      tags: activeChips.join(', '),
+      results_count: filteredDMC.length
+    });
+  }
+};
+
+// Track clicks to TourMaG external links
+document.addEventListener('click', function(e) {
+  const link = e.target.closest('a[href*="tourmag.com"]');
+  if (link) {
+    trackEvent('click_url', { target_url: link.href, dmc_title: activeDMC ? activeDMC.title : '' });
+  }
+});
+
+// Track session duration on page unload
+window.addEventListener('beforeunload', function() {
+  const duration = Math.round((Date.now() - sessionStart) / 1000);
+  // Use sendBeacon for reliability
+  const data = JSON.stringify({
+    type: 'session_end',
+    session_id: sessionId,
+    duration_seconds: duration,
+    timestamp: new Date().toISOString()
+  });
+  navigator.sendBeacon && navigator.sendBeacon(
+    `https://firestore.googleapis.com/v1/projects/destimap-e901b/databases/(default)/documents/analytics`,
+    '' // sendBeacon with Firestore REST is complex; we use a simpler approach
+  );
+  // Fallback: sync write (may not always work)
+  try {
+    if (localStorage.getItem('dmc_admin_notrack') !== '1') {
+      db.collection('analytics').add({
+        type: 'session_end',
+        session_id: sessionId,
+        duration_seconds: duration,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
+  } catch(e) {}
+});
+
+// Track initial page load
+trackEvent('page_load', { entry: 'embed_view' });
+
+// =====================================================================
+// INIT
+// =====================================================================
+loadData();
+
+// Tell parent iframe the embed height
+try {
+  var embedEl = document.getElementById('embedContainer');
+  if (embedEl) {
+    window.parent.postMessage({ type: 'dmc-map-resize', height: embedEl.offsetHeight }, '*');
+  }
+} catch(e) {}
+
+function openAllNews() {
+  var news = window._currentDmcNews || [];
+  var title = window._currentDmcTitle || '';
+  if (!news.length) return;
+  var h = '';
+  news.forEach(function(n) {
+    h += '<a href="' + n.url + '" target="_blank" class="news-card">';
+    if (n.image) h += '<img src="' + n.image + '" alt="" class="news-img">';
+    h += '<div class="news-card-body">';
+    h += '<div class="news-card-title">' + n.title + '</div>';
+
+    if (n.date) h += '<div class="news-card-date">' + n.date + '</div>';
+    if (n.excerpt) h += '<div style="font-size:.72rem;color:var(--text-light);margin-top:4px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">' + n.excerpt + '</div>';
+    h += '</div></a>';
+  });
+  document.getElementById('newsPopupTitle').textContent = title + ' — Actualités (' + news.length + ')';
+  document.getElementById('newsPopupScroll').innerHTML = h;
+  document.getElementById('newsPopupBg').classList.add('open');
+}
+function closeAllNews() {
+  document.getElementById('newsPopupBg').classList.remove('open');
+}
+</script>
+<div class="news-popup-bg" id="newsPopupBg" onclick="if(event.target===this)closeAllNews()">
+  <div class="news-popup">
+    <div class="news-popup-header">
+      <span id="newsPopupTitle"></span>
+      <button class="news-popup-close" onclick="closeAllNews()">✕</button>
+    </div>
+    <div class="news-popup-scroll" id="newsPopupScroll"></div>
+  </div>
+</div>
+</body>
+</html>
