@@ -1,0 +1,52 @@
+name: Scraping DMC DestiMaG
+
+on:
+  # Exécution automatique 4 fois par jour (heures UTC → heure de Paris)
+  # 07:00 UTC = 08:00 Paris (été 09:00)
+  # 10:00 UTC = 11:00 Paris (été 12:00)
+  # 13:00 UTC = 14:00 Paris (été 15:00)
+  # 16:00 UTC = 17:00 Paris (été 18:00)
+  schedule:
+    - cron: "0 7,10,13,16 * * *"
+
+  # Possibilité de lancer manuellement depuis l'interface GitHub
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout du repo
+        uses: actions/checkout@v4
+
+      - name: Installation de Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Lancer le scraping
+        run: python scrape_dmc.py
+
+      - name: Vérifier si le JSON a changé
+        id: check_changes
+        run: |
+          git add data/dmc_data.json
+          if git diff --cached --quiet; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "Aucun changement détecté dans les données."
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "Des changements ont été détectés !"
+          fi
+
+      - name: Commit et push si changements
+        if: steps.check_changes.outputs.changed == 'true'
+        run: |
+          git config user.name "GitHub Actions Bot"
+          git config user.email "actions@github.com"
+          git commit -m "🔄 Mise à jour automatique des données DMC - $(date -u +'%Y-%m-%d %H:%M UTC')"
+          git push
