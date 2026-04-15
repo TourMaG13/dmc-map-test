@@ -33,11 +33,11 @@
 body{font-family:'DM Sans',sans-serif;color:var(--text);overflow:hidden;height:100vh}
 
 /* ===== EMBED ===== */
-.embed-container{position:relative;width:100%;aspect-ratio:1/1;cursor:pointer;overflow:hidden;border-radius:var(--radius);background:var(--dark);border:2px solid var(--cyan);animation:embedGlow 2.5s ease-in-out infinite}
+.embed-container{position:relative;width:100%;aspect-ratio:1/1;cursor:pointer;overflow:hidden;border-radius:var(--radius);background:#dce3ea;border:2px solid var(--cyan);animation:embedGlow 2.5s ease-in-out infinite}
 @keyframes embedGlow{0%,100%{box-shadow:0 0 16px rgba(44,181,200,0.35),0 0 36px rgba(44,181,200,0.1)}50%{box-shadow:0 0 22px rgba(44,181,200,0.55),0 0 50px rgba(44,181,200,0.2)}}
 .embed-map{width:100%;height:100%;z-index:1}
-.embed-overlay{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,rgba(26,35,50,0.4),rgba(44,181,200,0.1));transition:opacity 0.3s}
-.embed-overlay-content{background:rgba(26,35,50,0.75);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border-radius:12px;padding:20px 32px;display:flex;flex-direction:column;align-items:center}
+.embed-overlay{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(26,35,50,0.08);transition:opacity 0.3s}
+.embed-overlay-content{background:rgba(26,35,50,0.7);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border-radius:12px;padding:20px 32px;display:flex;flex-direction:column;align-items:center}
 .embed-overlay h2{color:#fff;font-size:1.3rem;font-weight:700;margin-bottom:6px;text-shadow:0 1px 4px rgba(0,0,0,0.5)}
 .embed-overlay p{color:rgba(255,255,255,0.9);font-size:0.85rem;text-shadow:0 1px 3px rgba(0,0,0,0.4)}
 .embed-carousel{min-height:48px;text-align:center;transition:opacity 0.4s}
@@ -46,8 +46,8 @@ body{font-family:'DM Sans',sans-serif;color:var(--text);overflow:hidden;height:1
 .embed-overlay .embed-btn{margin-top:14px;background:var(--cyan);color:#fff;border:none;padding:10px 28px;border-radius:6px;font-size:0.9rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.2s}
 .embed-overlay .embed-btn:hover{background:var(--primary-light);transform:translateY(-1px)}
 .embed-container:hover .embed-overlay{opacity:0.95}
-.embed-dot-pulse{width:8px;height:8px;border-radius:50%;background:#2CB5C8;position:relative;box-shadow:0 0 3px rgba(44,181,200,0.5)}
-.embed-dot-pulse::after{content:'';position:absolute;inset:-3px;border-radius:50%;border:1.5px solid #2CB5C8;opacity:0;animation:embedRing 2.2s ease-out infinite}
+.embed-dot-pulse{width:8px;height:8px;border-radius:50%;background:#0E7490;position:relative;box-shadow:0 0 4px rgba(14,116,144,0.6)}
+.embed-dot-pulse::after{content:'';position:absolute;inset:-3px;border-radius:50%;border:1.5px solid #0E7490;opacity:0;animation:embedRing 2.2s ease-out infinite}
 .embed-dot-pulse:nth-child(2n)::after{animation-delay:0.7s}
 .embed-dot-pulse:nth-child(3n)::after{animation-delay:1.4s}
 @keyframes embedRing{0%{transform:scale(0.6);opacity:0.7}100%{transform:scale(2);opacity:0}}
@@ -1056,7 +1056,7 @@ function initEmbedMap() {
     zoomControl: false, dragging: false, scrollWheelZoom: false,
     doubleClickZoom: false, touchZoom: false, keyboard: false, attributionControl: false
   }).setView([30, 10], 2);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(embedMapInstance);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(embedMapInstance);
   let dotIdx = 0;
   allDMC.forEach(dmc => {
     (dmc.coordinates || []).forEach(coord => {
