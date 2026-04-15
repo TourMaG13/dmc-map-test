@@ -522,7 +522,10 @@ async function loadBanner() {
       return true;
     });
     if (!banner) return;
-    const isMobile = window.innerWidth < 768;
+    // Detect mobile: use screen.width (reliable even inside iframes) with window.innerWidth as fallback
+    var viewportWidth = screen.width || window.innerWidth;
+    try { if (window.parent && window.parent.innerWidth) viewportWidth = window.parent.innerWidth; } catch(e) {}
+    const isMobile = viewportWidth < 768;
     const html = isMobile ? banner.html_mobile : banner.html_desktop;
     if (!html || !html.trim()) return;
     const slot = document.getElementById('bannerSlot');
